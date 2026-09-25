@@ -11,7 +11,7 @@ Samouczące się narzędzie dla działów finansowych, które pracuje z Claude. 
 | Element | Plik | Do czego służy |
 |---|---|---|
 | Aplikacja (artefakt Claude) | `app/godzina-finansisty.html` | Wersja publikowana w claude.ai. Uruchamia zadania bezpośrednio w Claude. |
-| Wersja samodzielna HTML | `dist/index.html` | Otwierasz w przeglądarce. Kopiuje prompt do claude.ai albo łączy się z API Anthropic przez Twój klucz. |
+| Wersja samodzielna HTML | `dist/godzina-finansisty.html` (kopia: `dist/index.html`) | Otwierasz w przeglądarce. Kopiuje prompt do claude.ai albo łączy się z API Anthropic przez Twój klucz. |
 | Skill dla Claude | `claude-skill/godzina-finansisty/` | `SKILL.md`, katalog 45 zadań i plik pamięci `pamiec.md`, który Claude sam aktualizuje. |
 | Specyfikacja | `PROMPT.md` | Oryginalne polecenie przepisane na profesjonalny prompt. |
 | Testy | `tests/e2e.cjs` | 20 testów end-to-end w Playwright. |

@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Godzina Finansisty</title>
+<meta name="description" content="Samouczące się narzędzie promptów finansowych dla Claude: analizy, podatki, budżet, audyt, AP/AR i codzienna praca.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#EDF2EF; --surface:#FFFFFF; --surface-2:#F5F8F6; --ink:#13211C; --muted:#56675F; --rule:#D1DCD6;
+  --accent:#0B6B53; --accent-ink:#FFFFFF; --accent-soft:#DCEFE7;
+  --learn:#9A6412; --learn-soft:#FAF0DC; --learn-line:#E7C98F;
+  --bad:#B42318; --bad-soft:#FDE8E6; --good:#177245;
+  --shadow:0 1px 2px rgba(19,33,28,.06),0 8px 24px rgba(19,33,28,.06);
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0B1210; --surface:#121B18; --surface-2:#18231F; --ink:#E2EBE7; --muted:#93A69E; --rule:#27352F;
+    --accent:#3CC497; --accent-ink:#06140F; --accent-soft:#143429;
+    --learn:#E6B253; --learn-soft:#2E250F; --learn-line:#5E4A1C;
+    --bad:#F07A6E; --bad-soft:#3A1714; --good:#58CF95;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0B1210; --surface:#121B18; --surface-2:#18231F; --ink:#E2EBE7; --muted:#93A69E; --rule:#27352F;
+  --accent:#3CC497; --accent-ink:#06140F; --accent-soft:#143429;
+  --learn:#E6B253; --learn-soft:#2E250F; --learn-line:#5E4A1C;
+  --bad:#F07A6E; --bad-soft:#3A1714; --good:#58CF95;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+.num{font-variant-numeric:tabular-nums}
+
+/* ——— header ——— */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.top-in{display:flex;align-items:center;gap:16px;padding-block:10px;padding-inline:16px;max-width:1500px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand h1{font-size:21px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.brand small{display:block;color:var(--muted);font-size:12px;font-family:var(--f-body);font-weight:500;letter-spacing:.02em}
+.search{flex:1;min-width:0;position:relative;max-width:520px;margin-inline:auto}
+.search input{width:100%;height:40px;border:1px solid var(--rule);background:var(--surface);border-radius:999px;padding:0 44px 0 16px}
+.search kbd{position:absolute;right:12px;top:50%;transform:translateY(-50%);font:600 11px var(--f-mono);color:var(--muted);border:1px solid var(--rule);border-radius:5px;padding:1px 5px;background:var(--surface-2)}
+.clock{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.clock svg{display:block}
+.clock .lbl{font-size:12px;color:var(--muted);line-height:1.2}
+.clock .lbl b{display:block;font:700 16px var(--f-display);color:var(--ink)}
+.iconbtn{height:40px;min-width:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--rule);background:var(--surface);border-radius:999px;cursor:pointer;padding:0 12px;font-weight:600;font-size:13px}
+.iconbtn:hover{border-color:var(--accent)}
+
+/* ——— layout ——— */
+.wrap{max-width:1500px;margin:0 auto;padding-inline:16px;padding-block:16px 40px;display:grid;grid-template-columns:230px minmax(0,1fr) minmax(360px,470px);gap:20px;align-items:start}
+nav.areas{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);display:flex;flex-direction:column;gap:2px;max-height:calc(100vh - 96px);overflow:auto;padding-bottom:8px}
+.areas .grp{font:600 11px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:14px 10px 6px}
+.areas button{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border:0;background:none;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--ink)}
+.areas button:hover{background:var(--surface)}
+.areas button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.areas button .c{font:12px var(--f-mono);color:var(--muted)}
+.areas button.learned[aria-pressed="true"]{background:var(--learn-soft);color:var(--learn)}
+
+.catalog{min-width:0;display:flex;flex-direction:column;gap:22px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sec-h h2{font-size:22px;font-weight:700}
+.sec-h p{margin:0;color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.card{position:relative;display:flex;flex-direction:column;gap:8px;text-align:left;border:1px solid var(--rule);background:var(--surface);border-radius:var(--r);padding:14px 14px 12px;cursor:pointer;transition:border-color .15s,transform .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.card[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.card h3{font-size:16px;font-weight:700}
+.card p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+.card .meta{margin-top:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:600;line-height:1.5;border:1px solid var(--rule);background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill.time{font-family:var(--f-mono);font-weight:600;color:var(--accent);border-color:transparent;background:var(--accent-soft)}
+.pill.learn{color:var(--learn);background:var(--learn-soft);border-color:var(--learn-line)}
+.pill.new{color:var(--accent-ink);background:var(--accent);border-color:transparent}
+.empty{color:var(--muted);padding:24px;border:1px dashed var(--rule);border-radius:var(--r);text-align:center}
+
+/* ——— composer ——— */
+.composer{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);max-height:calc(100vh - 96px);overflow:auto;background:var(--surface);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.cp-head{padding:16px 18px 12px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:6px}
+.cp-head .eyebrow{font:600 11px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cp-head h2{font-size:22px}
+.cp-head p{margin:0;color:var(--muted);font-size:13px}
+.cp-close{display:none}
+.cp-body{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12.5px;font-weight:600;color:var(--ink)}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--rule);background:var(--surface-2);border-radius:8px;padding:8px 10px;font-size:14px}
+.field textarea{min-height:74px;resize:vertical;line-height:1.45}
+.field textarea.data{font-family:var(--f-mono);font-size:12.5px;min-height:110px}
+.field .hint{font-size:11.5px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--rule);border-radius:9px;padding:3px;background:var(--surface-2);gap:3px}
+.seg button{flex:1;border:0;background:none;border-radius:6px;padding:6px 4px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.drop{border:1px dashed var(--rule);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);background:var(--surface-2)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop label{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--rule);background:var(--surface);border-radius:999px;padding:2px 4px 2px 10px}
+.chip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;padding:2px 6px}
+.learnbox{border:1px solid var(--learn-line);background:var(--learn-soft);border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--ink)}
+.learnbox b{color:var(--learn)}
+.learnbox ul{margin:6px 0 0;padding-left:18px}
+details.prev{border:1px solid var(--rule);border-radius:9px;background:var(--surface-2)}
+details.prev summary{cursor:pointer;padding:8px 12px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+details.prev summary span{font:12px var(--f-mono);color:var(--muted);font-weight:400}
+details.prev pre{margin:0;padding:10px 12px;border-top:1px solid var(--rule);font:12px/1.5 var(--f-mono);white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 14px;border-radius:9px;border:1px solid var(--rule);background:var(--surface);font-weight:600;font-size:13.5px;cursor:pointer;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:1 1 180px}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn[disabled]{opacity:.55;cursor:default}
+.btn.sm{height:32px;padding:0 10px;font-size:12.5px;border-radius:8px}
+.status{font-size:12.5px;color:var(--muted);min-height:18px}
+.out{border-top:1px solid var(--rule);padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px}
+.out-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.out-h h3{font-size:16px}
+.md{font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+.md h1,.md h2,.md h3,.md h4{font-family:var(--f-display);margin:14px 0 6px;font-size:16px}
+.md h1{font-size:19px}.md h2{font-size:17px}
+.md p{margin:6px 0}
+.md ul,.md ol{margin:6px 0;padding-left:22px}
+.md code{font:12.5px var(--f-mono);background:var(--surface-2);border:1px solid var(--rule);border-radius:4px;padding:0 4px}
+.md pre{background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:10px;overflow:auto}
+.md pre code{border:0;padding:0;background:none}
+.md .tbl{overflow-x:auto;margin:8px 0}
+.md table{border-collapse:collapse;font-size:13px;min-width:100%}
+.md th,.md td{border:1px solid var(--rule);padding:5px 8px;text-align:left;vertical-align:top}
+.md th{background:var(--surface-2);font-weight:600}
+.md td.n{text-align:right;font-variant-numeric:tabular-nums}
+.md blockquote{margin:8px 0;padding:4px 12px;border-left:3px solid var(--rule);color:var(--muted)}
+.md hr{border:0;border-top:1px solid var(--rule);margin:12px 0}
+.rate{display:flex;flex-direction:column;gap:8px;border:1px solid var(--rule);border-radius:10px;padding:10px 12px;background:var(--surface-2)}
+.rate .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rate .q{font-size:13px;font-weight:600;margin-right:auto}
+.rbtn{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);cursor:pointer;font-weight:600;font-size:12.5px}
+.rbtn[aria-pressed="true"].up{background:var(--accent-soft);color:var(--good);border-color:var(--good)}
+.rbtn[aria-pressed="true"].down{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}
+textarea#editOut{width:100%;min-height:220px;border:1px solid var(--rule);border-radius:8px;background:var(--surface-2);padding:10px;font:12.5px/1.5 var(--f-mono)}
+
+/* ——— dialog ——— */
+dialog{border:1px solid var(--rule);border-radius:14px;background:var(--surface);color:var(--ink);padding:0;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 48px);box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(6,14,11,.45)}
+.dlg-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--surface);z-index:1}
+.dlg-h h2{font-size:20px}
+.tabs{display:flex;gap:4px;padding:10px 18px 0;border-bottom:1px solid var(--rule);overflow-x:auto}
+.tabs button{border:0;background:none;padding:8px 10px;font-weight:600;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.dlg-b{padding:16px 18px 20px}
+.form2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form2 .wide{grid-column:1/-1}
+.lesson{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--rule);border-radius:9px;padding:9px 10px;background:var(--surface-2)}
+.lesson p{margin:0;flex:1;font-size:13.5px}
+.lesson small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.list{display:flex;flex-direction:column;gap:8px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat{border:1px solid var(--rule);border-radius:10px;padding:10px 12px;background:var(--surface-2)}
+.stat b{display:block;font:700 22px var(--f-display)}
+.stat span{font-size:12px;color:var(--muted)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:90px;border-bottom:1px solid var(--rule);padding-top:6px}
+.bars div{flex:1;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.bars div span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font:10.5px var(--f-mono);color:var(--muted)}
+.bars div em{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font:10.5px var(--f-mono);color:var(--muted);font-style:normal}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:60;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+@media (max-width:1180px){
+  .wrap{grid-template-columns:200px minmax(0,1fr)}
+  .composer{position:fixed;inset:auto 0 0 auto;top:0;width:min(470px,100vw);max-height:none;height:100%;border-radius:0;z-index:40;transform:translateX(105%);transition:transform .22s ease;padding-top:env(safe-area-inset-top,0px)}
+  .composer.open{transform:none}
+  .cp-close{display:inline-flex;position:absolute;right:12px;top:calc(12px + env(safe-area-inset-top,0px))}
+  .cp-head{position:relative;padding-right:60px}
+}
+@media (max-width:760px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  nav.areas{position:static;flex-direction:row;overflow-x:auto;max-height:none;gap:6px;padding-bottom:4px;scrollbar-width:none}
+  .areas .grp{display:none}
+  .areas button{white-space:nowrap;border:1px solid var(--rule);background:var(--surface);border-radius:999px;padding:6px 12px}
+  .top-in{flex-wrap:wrap;gap:10px}
+  .search{order:3;flex-basis:100%;max-width:none}
+  .brand small{display:none}
+  .clock .lbl{display:none}
+  .form2{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="none" stroke="var(--accent)" stroke-width="3"/><path d="M15 7v8l5 3" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/></svg>
+      <div><h1>Godzina Finansisty</h1><small>Claude dla finansów i księgowości</small></div>
+    </div>
+    <div class="search">
+      <label for="q" class="sr">Szukaj zadania</label>
+      <input id="q" type="search" placeholder="Szukaj: odchylenia, KSeF, VAT, audyt…" autocomplete="off">
+      <kbd>Ctrl K</kbd>
+    </div>
+    <div class="clock" title="Zaoszczędzony czas dziś (cel: 60 minut)">
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+        <circle cx="22" cy="22" r="18" fill="none" stroke="var(--rule)" stroke-width="5"/>
+        <circle id="ring" cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" transform="rotate(-90 22 22)" stroke-dasharray="113.1" stroke-dashoffset="113.1" style="transition:stroke-dashoffset .6s ease"/>
+      </svg>
+      <div class="lbl"><b class="num" id="savedToday">0 min</b><span id="savedSub">dziś, cel 60 min</span></div>
+    </div>
+    <button class="iconbtn" id="openSettings" aria-haspopup="dialog">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Zm6 3.8V7l-1.7-.4-.5-1.2.9-1.5-1.4-1.4-1.5.9-1.2-.5L9 1.2H7l-.4 1.7-1.2.5-1.5-.9-1.4 1.4.9 1.5-.5 1.2L1.2 7v2l1.7.4.5 1.2-.9 1.5 1.4 1.4 1.5-.9 1.2.5.4 1.7h2l.4-1.7 1.2-.5 1.5.9 1.4-1.4-.9-1.5.5-1.2Z" fill="currentColor"/></svg>
+      <span>Profil i pamięć</span>
+    </button>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="areas" id="areas" aria-label="Obszary"></nav>
+  <main class="catalog" id="catalog" aria-live="polite"></main>
+
+  <aside class="composer" id="composer" aria-label="Kreator zadania">
+    <div class="cp-head">
+      <span class="eyebrow" id="cpArea"></span>
+      <h2 id="cpTitle"></h2>
+      <p id="cpDesc"></p>
+      <button class="iconbtn cp-close" id="cpClose" aria-label="Zamknij kreator">✕</button>
+    </div>
+    <form class="cp-body" id="cpForm" autocomplete="off">
+      <div class="field">
+        <label>Tryb pracy</label>
+        <div class="seg" id="mode" role="group" aria-label="Tryb pracy">
+          <button type="button" data-m="do" aria-pressed="true">Zrób to za mnie</button>
+          <button type="button" data-m="guide" aria-pressed="false">Przewodnik</button>
+          <button type="button" data-m="check" aria-pressed="false">Checklista</button>
+        </div>
+      </div>
+      <div id="fields" style="display:flex;flex-direction:column;gap:12px"></div>
+      <div class="field">
+        <label>Załączniki</label>
+        <div class="drop" id="drop">
+          <span>Przeciągnij CSV, XLSX, TXT, JSON, MD lub zdjęcie faktury albo</span>
+          <label for="file">wybierz pliki</label>
+          <input id="file" type="file" multiple hidden accept=".csv,.tsv,.txt,.md,.json,.xml,.xlsx,.xls,image/png,image/jpeg,image/webp,image/gif">
+        </div>
+        <div class="chips" id="files"></div>
+      </div>
+      <div class="learnbox" id="learnbox" hidden></div>
+      <details class="prev" id="prevBox">
+        <summary>Podgląd promptu dla Claude <span id="promptLen" class="num"></span></summary>
+        <pre id="preview"></pre>
+      </details>
+      <div class="actions">
+        <button type="submit" class="btn primary" id="runBtn">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.8v10.4L12 7 3 1.8Z" fill="currentColor"/></svg>
+          Uruchom w Claude
+        </button>
+        <button type="button" class="btn" id="copyBtn">Kopiuj prompt</button>
+        <a class="btn" id="openClaude" href="https://claude.ai/new" target="_blank" rel="noopener">Otwórz w claude.ai</a>
+      </div>
+      <div class="status" id="status" role="status"></div>
+    </form>
+    <section class="out" id="out" hidden>
+      <div class="out-h">
+        <h3>Odpowiedź Claude</h3>
+        <div class="actions">
+          <button class="btn sm" id="stopBtn" hidden>Zatrzymaj</button>
+          <button class="btn sm" id="copyOut">Kopiuj</button>
+          <button class="btn sm" id="editBtn">Popraw ręcznie</button>
+          <button class="btn sm" id="saveOut">Pobierz .md</button>
+        </div>
+      </div>
+      <div class="md" id="outMd"></div>
+      <div id="editWrap" hidden>
+        <textarea id="editOut" aria-label="Twoja poprawiona wersja"></textarea>
+        <div class="actions" style="margin-top:8px">
+          <button class="btn primary" id="learnEdit">Naucz się z moich poprawek</button>
+          <button class="btn" id="cancelEdit">Anuluj</button>
+        </div>
+      </div>
+      <div class="rate" id="rate">
+        <div class="row">
+          <span class="q">Jak wypadła odpowiedź?</span>
+          <button class="rbtn up" id="rUp" aria-pressed="false">Trafiona</button>
+          <button class="rbtn down" id="rDown" aria-pressed="false">Do poprawy</button>
+        </div>
+        <div class="field" id="rateNoteWrap" hidden>
+          <label for="rateNote">Co zmienić następnym razem? Zapamiętam to jako regułę.</label>
+          <textarea id="rateNote" placeholder="np. Zawsze pokazuj kwoty w tys. zł i dodawaj kolumnę z % udziału"></textarea>
+          <div class="actions"><button class="btn sm" id="rateSave">Zapamiętaj</button></div>
+        </div>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<dialog id="settings" aria-labelledby="setTitle">
+  <div class="dlg-h"><h2 id="setTitle">Profil i pamięć</h2><button class="iconbtn" id="closeSettings" aria-label="Zamknij">✕</button></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="profile">Profil firmy</button>
+    <button role="tab" aria-selected="false" data-tab="memory">Czego się nauczyłem</button>
+    <button role="tab" aria-selected="false" data-tab="stats">Statystyki</button>
+    <button role="tab" aria-selected="false" data-tab="data">Dane i połączenie</button>
+  </div>
+  <div class="dlg-b">
+    <section data-panel="profile">
+      <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Profil trafia do każdego promptu jako kontekst. Wypełnij raz, a odpowiedzi będą dopasowane do Twojej firmy.</p>
+      <form class="form2" id="profileForm"></form>
+    </section>
+    <section data-panel="memory" hidden>
+      <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Reguły powstają z Twoich ocen i poprawek. Reguły globalne trafiają do każdego promptu, reguły zadania tylko do tego zadania. Wyłącz lub usuń te, które nie pasują.</p>
+      <div class="field" style="margin-bottom:12px">
+        <label for="newRule">Dodaj regułę ręcznie (globalną)</label>
+        <div style="display:flex;gap:8px"><input id="newRule" placeholder="np. Kwoty podawaj w tys. zł z jednym miejscem po przecinku" style="flex:1"><button class="btn sm" id="addRule" type="button">Dodaj</button></div>
+      </div>
+      <div class="list" id="lessons"></div>
+    </section>
+    <section data-panel="stats" hidden>
+      <div class="stats" id="statTiles"></div>
+      <h3 style="font-size:14px;margin:4px 0 8px">Minuty zaoszczędzone w ostatnich 7 dniach</h3>
+      <div class="bars" id="bars" style="margin-bottom:28px"></div>
+      <h3 style="font-size:14px;margin:0 0 8px">Najczęściej używane</h3>
+      <div class="list" id="topUsed"></div>
+    </section>
+    <section data-panel="data" hidden>
+      <div class="list">
+        <div class="lesson"><p><b>Eksport pamięci</b><small>Profil, reguły, statystyki i zapamiętane wartości jako plik JSON. Przenieś go na inny komputer lub do zespołu.</small></p><button class="btn sm" id="exportBtn" type="button">Eksportuj</button></div>
+        <div class="lesson"><p><b>Import pamięci</b><small>Wczytaj plik JSON z eksportu. Reguły zostaną scalone.</small></p><label class="btn sm" for="importFile">Importuj</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
+        <div class="lesson"><p><b>Wyczyść pamięć</b><small>Usuwa profil, reguły i statystyki z tej przeglądarki.</small></p><button class="btn sm" id="resetBtn" type="button">Wyczyść</button></div>
+      </div>
+      <h3 style="font-size:14px;margin:18px 0 8px">Połączenie z Claude</h3>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px" id="connInfo"></p>
+      <div class="form2">
+        <div class="field wide"><label for="apiKey">Klucz API Anthropic (tylko wersja samodzielna HTML)</label><input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off"><span class="hint">Klucz zostaje w tej przeglądarce. Nie używaj go na współdzielonym komputerze.</span></div>
+        <div class="field"><label for="apiModel">Model</label><select id="apiModel"><option value="claude-sonnet-5">Claude Sonnet 5 (zalecany)</option><option value="claude-opus-5-5">Claude Opus 5.5 (najdokładniejszy)</option><option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (najszybszy)</option></select></div>
+        <div class="field"><label for="apiKeep">Zapamiętaj klucz</label><select id="apiKeep"><option value="0">Tylko na tę sesję</option><option value="1">Tak, w tej przeglądarce</option></select></div>
+      </div>
+      <div id="resetConfirm" class="learnbox" hidden style="margin-top:12px">Na pewno usunąć całą pamięć? <button class="btn sm" id="resetYes" type="button">Tak, usuń</button> <button class="btn sm" id="resetNo" type="button">Anuluj</button></div>
+    </section>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+"use strict";
+/* =========================================================
+   1. KATALOG ZADAŃ (na podstawie diagramu + nowości 2026)
+   ========================================================= */
+const AREAS = [
+  {id:"fa",  name:"Zespół analiz finansowych", grp:"Zespoły"},
+  {id:"bud", name:"Budżetowanie i prognozy",   grp:"Zespoły"},
+  {id:"cfo", name:"CFO",                        grp:"Zespoły"},
+  {id:"tax", name:"Podatki i strategia",       grp:"Zespoły"},
+  {id:"ap",  name:"Zobowiązania i należności", grp:"Zespoły"},
+  {id:"ctl", name:"Kontroler finansowy",       grp:"Zespoły"},
+  {id:"aud", name:"Zespół audytu",             grp:"Zespoły"},
+  {id:"day", name:"Produktywność",             grp:"Na co dzień"},
+  {id:"stk", name:"Komunikacja z interesariuszami", grp:"Na co dzień"},
+  {id:"perf",name:"Plany efektywności",        grp:"Na co dzień"},
+  {id:"tool",name:"Samouczki narzędzi",        grp:"Na co dzień"}
+];
+const DATA = {k:"dane", l:"Dane (wklej z Excela lub załącz plik)", type:"data", ex:"", opt:true};
+const T = [
+ // ——— Zespół analiz finansowych
+ {id:"fa-trend",a:"fa",t:"Analiza trendów",min:25,d:"Analiza trendów finansowych: zbieranie danych, techniki, wnioski.",
+  role:"starszy analityk finansowy FP&A",
+  task:"Przeanalizuj trendy finansowe dla obszaru: {{obszar}} w okresie {{okres}}. Wskaż dynamikę r/r i m/m, sezonowość, punkty zwrotne i anomalie. Oddziel trend od zdarzeń jednorazowych. Zaproponuj 3–5 wskaźników wczesnego ostrzegania.",
+  v:[{k:"obszar",l:"Obszar analizy",ex:"przychody i marża brutto według linii produktowych"},{k:"okres",l:"Okres",ex:"01.2024–08.2026"},DATA],
+  fmt:"1) Podsumowanie dla zarządu (3 zdania). 2) Tabela: wskaźnik | początek | koniec | zmiana % | CAGR | komentarz. 3) Obserwacje i hipotezy przyczyn. 4) Rekomendowane wykresy (typ, osie). 5) Następne kroki."},
+ {id:"fa-report",a:"fa",t:"Generowanie raportów",min:40,d:"Procedura przygotowania różnych typów raportów finansowych.",
+  role:"kierownik ds. raportowania zarządczego",
+  task:"Przygotuj {{typ}} za okres {{okres}} dla odbiorcy: {{odbiorca}}. Zaprojektuj strukturę, kluczowe metryki, komentarz zarządczy i listę kontroli jakości przed wysyłką.",
+  v:[{k:"typ",l:"Typ raportu",type:"select",o:["raport miesięczny (MBR)","raport kwartalny dla zarządu","pakiet dla rady nadzorczej","raport dla banku (kowenanty)","raport dla inwestorów"]},{k:"okres",l:"Okres",ex:"sierpień 2026"},{k:"odbiorca",l:"Odbiorca",ex:"Zarząd i rada nadzorcza"},DATA],
+  fmt:"Szkielet raportu z nagłówkami, tabele z danymi (brakujące oznacz [DO UZUPEŁNIENIA]), komentarz w układzie: co się stało, dlaczego, co dalej. Na końcu checklista QA."},
+ {id:"fa-invest",a:"fa",t:"Research inwestycyjny",min:35,d:"Ustrukturyzowana analiza potencjalnych okazji inwestycyjnych.",
+  role:"analityk inwestycyjny z certyfikatem CFA",
+  task:"Oceń okazję inwestycyjną: {{inwestycja}}. Kwota: {{kwota}}, horyzont: {{horyzont}}. Zastosuj ramę: teza, rynek, przewagi konkurencyjne, finanse (NPV, IRR, okres zwrotu, wrażliwość), ryzyka, scenariusze wyjścia.",
+  v:[{k:"inwestycja",l:"Inwestycja",ex:"zakup linii do pakowania z automatyczną kontrolą jakości"},{k:"kwota",l:"Kwota",ex:"2,4 mln zł"},{k:"horyzont",l:"Horyzont",ex:"7 lat"},DATA],
+  fmt:"Karta inwestycji (one-pager), tabela wyceny z założeniami, macierz ryzyk (prawdopodobieństwo × wpływ), rekomendacja: inwestować / warunkowo / odrzucić, lista pytań do due diligence."},
+ {id:"fa-scen",a:"fa",t:"Analiza scenariuszowa",min:35,d:"Scenariusz bazowy, optymistyczny, pesymistyczny i stresowy z wpływem na wynik i gotówkę.",
+  role:"starszy analityk finansowy FP&A",
+  task:"Zbuduj analizę scenariuszy (bazowy, optymistyczny, pesymistyczny, stresowy) dla: {{temat}}. Kluczowe czynniki: {{czynniki}}. Pokaż wpływ na przychody, EBITDA, przepływy pieniężne i płynność.",
+  v:[{k:"temat",l:"Temat",ex:"plan finansowy na 2027"},{k:"czynniki",l:"Kluczowe czynniki",type:"textarea",ex:"kurs EUR/PLN, ceny energii, wolumen sprzedaży, wzrost płac o 8%"},DATA],
+  fmt:"Tabela założeń per scenariusz, tabela wyników, analiza wrażliwości (opis wykresu tornado), wyzwalacze decyzji, plan działań na scenariusz pesymistyczny."},
+ // ——— Budżetowanie
+ {id:"bud-create",a:"bud",t:"Tworzenie budżetu",min:45,d:"Kompleksowy budżet krok po kroku, ze wszystkimi niezbędnymi elementami.",
+  role:"kierownik ds. budżetowania i kontrolingu",
+  task:"Przygotuj budżet ({{rodzaj}}) na {{okres}} dla: {{jednostka}}. Metoda: {{metoda}}. Obejmij przychody, koszty stałe i zmienne, wynagrodzenia, CAPEX, przepływy pieniężne i założenia makroekonomiczne.",
+  v:[{k:"rodzaj",l:"Rodzaj budżetu",type:"select",o:["roczny operacyjny","kroczący (rolling forecast)","projektowy","budżet działu"]},{k:"okres",l:"Okres",ex:"rok 2027"},{k:"jednostka",l:"Jednostka",ex:"cała spółka"},{k:"metoda",l:"Metoda",type:"select",o:["oparta na czynnikach (driver-based)","od zera (ZBB)","przyrostowa"]},DATA],
+  fmt:"Harmonogram prac budżetowych, struktura pliku (arkusze i kolumny), tabela założeń, szablon budżetu w tabeli Markdown, lista kontrolna zatwierdzenia."},
+ {id:"bud-var",a:"bud",t:"Analiza odchyleń",min:30,d:"Porównanie wykonania z budżetem: przyczyny, efekt ceny, wolumenu i struktury.",
+  role:"kontroler finansowy",
+  task:"Przeprowadź analizę odchyleń wykonanie vs budżet za {{okres}}. Próg istotności: {{prog}}. Rozłóż odchylenia na efekt ceny, wolumenu i struktury tam, gdzie dane na to pozwalają. Oddziel przyczyny jednorazowe od trwałych.",
+  v:[{k:"okres",l:"Okres",ex:"sierpień 2026"},{k:"prog",l:"Próg istotności",ex:"±5% lub 50 000 zł"},{...DATA,ex:"Pozycja;Budżet;Wykonanie\nPrzychody ze sprzedaży;4 200 000;3 950 000\nKoszt materiałów;1 700 000;1 810 000\nWynagrodzenia;1 150 000;1 142 000\nMarketing;180 000;236 000\nEnergia;95 000;121 000"}],
+  fmt:"Tabela: pozycja | budżet | wykonanie | odchylenie zł | odchylenie % | korzystne/niekorzystne | przyczyna | działanie. Komentarz zarządczy do 150 słów. Trzy najważniejsze działania korygujące."},
+ {id:"bud-forecast",a:"bud",t:"Modelowanie prognoz",min:40,d:"Ustrukturyzowane podejście do budowy modeli prognoz finansowych.",
+  role:"analityk FP&A i specjalista od modelowania finansowego",
+  task:"Zaprojektuj model prognozy: {{przedmiot}} na horyzont {{horyzont}}. Dobierz metodę (np. średnie ruchome, regresja, ETS, model oparty na czynnikach), uzasadnij wybór, opisz wymagane dane, walidację (MAPE, backtest) i sposób aktualizacji.",
+  v:[{k:"przedmiot",l:"Co prognozujemy",ex:"miesięczne przychody w podziale na 3 kanały sprzedaży"},{k:"horyzont",l:"Horyzont",ex:"18 miesięcy"},DATA],
+  fmt:"Architektura modelu (arkusze lub moduły), formuły Excel albo kod Python z komentarzami, tabela metryk dokładności, ograniczenia modelu."},
+ {id:"bud-cash13",a:"bud",t:"Płynność na 13 tygodni",min:40,nw:true,d:"Kroczący 13-tygodniowy cash flow z sygnałami ostrzegawczymi.",
+  role:"skarbnik (treasury manager)",
+  task:"Zbuduj 13-tygodniową prognozę przepływów pieniężnych metodą bezpośrednią, od {{start}}. Saldo początkowe: {{saldo}}. Uwzględnij spływ należności według historycznego DSO, harmonogram zobowiązań, wynagrodzenia, terminy ZUS, PIT i VAT, raty kredytów oraz mechanizm podzielonej płatności.",
+  v:[{k:"start",l:"Pierwszy tydzień",ex:"29.09.2026"},{k:"saldo",l:"Saldo początkowe",ex:"1 850 000 zł (w tym 240 000 zł na rachunku VAT)"},DATA],
+  fmt:"Tabela tygodniowa (wpływy, wydatki, saldo, wymagane minimum), lista tygodni zagrożonych, działania zaradcze (faktoring, przesunięcie płatności, linia kredytowa)."},
+ {id:"bud-cba",a:"bud",t:"Analiza kosztów i korzyści",min:30,d:"Procedura analizy kosztów i korzyści projektów oraz inicjatyw.",
+  role:"analityk finansowy ds. projektów inwestycyjnych",
+  task:"Wykonaj analizę kosztów i korzyści dla: {{projekt}}. Nakłady: {{naklady}}. Oszacuj korzyści ilościowe i jakościowe, NPV przy stopie {{stopa}}, IRR, okres zwrotu i próg rentowności. Pokaż wrażliwość na kluczowe założenia.",
+  v:[{k:"projekt",l:"Projekt",ex:"wdrożenie automatycznego obiegu faktur z KSeF"},{k:"naklady",l:"Nakłady",ex:"380 000 zł wdrożenie + 60 000 zł rocznie"},{k:"stopa",l:"Stopa dyskontowa",ex:"9%"},DATA],
+  fmt:"Tabela przepływów rok po roku, wskaźniki, analiza wrażliwości, rekomendacja z warunkami."},
+ // ——— CFO
+ {id:"cfo-strat",a:"cfo",t:"Planowanie strategiczne",min:45,d:"Finansowy plan strategiczny: założenia, elementy, kamienie milowe.",
+  role:"doświadczony dyrektor finansowy (CFO)",
+  task:"Opracuj finansowy plan strategiczny na {{horyzont}}. Cele firmy: {{cele}}. Obejmij ambicje finansowe, alokację kapitału, strukturę finansowania, inicjatywy, KPI, ryzyka i kamienie milowe.",
+  v:[{k:"horyzont",l:"Horyzont",ex:"2027–2029"},{k:"cele",l:"Cele",type:"textarea",ex:"podwojenie eksportu, marża EBITDA 14%, dług netto/EBITDA poniżej 2,0"},DATA],
+  fmt:"Cele SMART, mapa inicjatyw, projekcja P&L i cash flow (wysoki poziom), struktura finansowania, harmonogram, ryzyka."},
+ {id:"cfo-comm",a:"cfo",t:"Komunikacja finansowa",min:20,d:"Jasna i skuteczna komunikacja finansowa dla różnych interesariuszy.",
+  role:"CFO z doświadczeniem w relacjach inwestorskich",
+  task:"Przygotuj komunikat finansowy: {{temat}} dla odbiorcy: {{odbiorca}}. Kanał: {{kanal}}. Kluczowe liczby: {{liczby}}. Dopasuj język do odbiorcy, zacznij od wniosku (zasada piramidy) i przewidź trudne pytania.",
+  v:[{k:"temat",l:"Temat",ex:"wyniki za I półrocze 2026 i korekta prognozy"},{k:"odbiorca",l:"Odbiorca",ex:"pracownicy"},{k:"kanal",l:"Kanał",type:"select",o:["e-mail","prezentacja","list do inwestorów","komunikat wewnętrzny","szkic raportu bieżącego ESPI"]},{k:"liczby",l:"Kluczowe liczby",type:"textarea",ex:"przychody +6% r/r, EBITDA −4% r/r, dług netto 12,3 mln zł"}],
+  fmt:"Gotowy tekst, 3 kluczowe przesłania, 5 trudnych pytań z odpowiedziami."},
+ {id:"cfo-ma",a:"cfo",t:"Analiza M&A",min:45,d:"Lista kontrolna finansowego due diligence przy fuzjach i przejęciach.",
+  role:"partner ds. transakcji (M&A, due diligence)",
+  task:"Przygotuj listę kontrolną i plan finansowego due diligence dla transakcji: {{transakcja}}. Uwzględnij jakość zysków (QoE), dług netto i pozycje dłużnopodobne, normalizację kapitału obrotowego, podatki, zobowiązania warunkowe, synergie i mechanizm ceny (locked box albo completion accounts).",
+  v:[{k:"transakcja",l:"Transakcja",type:"textarea",ex:"przejęcie 100% udziałów dystrybutora części zamiennych, przychody 85 mln zł"},DATA],
+  fmt:"Checklista (obszar | pytanie | dokument | priorytet), lista red flags, szkic struktury raportu DD, pytania do zarządu spółki przejmowanej."},
+ {id:"cfo-kpi",a:"cfo",t:"Wskaźniki efektywności",min:30,d:"Systematyczne ustalanie i monitorowanie kluczowych wskaźników (KPI).",
+  role:"CFO i architekt systemów raportowania",
+  task:"Zaprojektuj system finansowych KPI dla: {{jednostka}}. Cel strategiczny: {{cel}}. Dla każdego wskaźnika podaj definicję, wzór, źródło danych, częstotliwość, właściciela, wartość docelową i próg alarmowy.",
+  v:[{k:"jednostka",l:"Jednostka",ex:"spółka produkcyjna, 3 zakłady"},{k:"cel",l:"Cel strategiczny",ex:"poprawa konwersji gotówki i rentowności klientów"}],
+  fmt:"Tabela KPI, układ dashboardu (sekcje i wykresy), rytm przeglądów, pułapki (np. wskaźniki próżności)."},
+ // ——— Podatki
+ {id:"tax-filing",a:"tax",t:"Wsparcie rozliczeń podatkowych",min:30,d:"Kompleksowa checklista przygotowania i złożenia deklaracji.",
+  role:"doradca podatkowy",
+  task:"Przygotuj listę kontrolną i harmonogram rozliczenia: {{deklaracja}} za {{okres}} dla podmiotu: {{podmiot}}. Uwzględnij terminy, wymagane dokumenty, typowe błędy, uzgodnienia z księgami (np. rejestry VAT vs JPK_V7 vs KSeF) i kroki weryfikacji przed wysyłką.",
+  v:[{k:"deklaracja",l:"Rozliczenie",type:"select",o:["JPK_V7M / JPK_V7K (VAT)","CIT-8 ze sprawozdaniem i JPK_CIT","CIT-8 i podatek minimalny","PIT-36 / PIT-36L","informacja o cenach transferowych (TPR-C)"]},{k:"okres",l:"Okres",ex:"wrzesień 2026"},{k:"podmiot",l:"Podmiot",ex:"sp. z o.o., czynny podatnik VAT, ok. 60 mln zł przychodu"}],
+  fmt:"Checklista z polami [ ], tabela terminów (czynność | termin | odpowiedzialny), lista dokumentów, pułapki. Każdy termin oznacz jako do weryfikacji z aktualnym stanem prawnym."},
+ {id:"tax-research",a:"tax",t:"Research przepisów",min:30,d:"Ustrukturyzowane badanie przepisów i śledzenie zmian.",
+  role:"doradca podatkowy specjalizujący się w analizach prawnych",
+  task:"Zbadaj zagadnienie podatkowe: {{pytanie}}. Przedstaw podstawę prawną (ustawa, artykuł), interpretacje i orzecznictwo (zaznacz, kiedy nie masz pewności), stanowiska różnych stron i praktyczne wnioski. Wskaż, jak monitorować dalsze zmiany (Dziennik Ustaw, interpretacje KIS w systemie EUREKA, projekty na RCL).",
+  v:[{k:"pytanie",l:"Pytanie",type:"textarea",ex:"Czy koszty samochodu używanego przez członka zarządu w leasingu można w całości zaliczyć do kosztów uzyskania przychodów?"}],
+  fmt:"Streszczenie, analiza, tabela: źródło | co stanowi | pewność (wysoka/średnia/niska), rekomendacja, lista źródeł do weryfikacji."},
+ {id:"tax-audit",a:"tax",t:"Przygotowanie do kontroli",min:40,d:"Przygotowanie do kontroli podatkowej, w tym organizacja dokumentów.",
+  role:"doradca podatkowy z doświadczeniem w postępowaniach kontrolnych",
+  task:"Przygotuj plan przygotowania do: {{rodzaj}} w zakresie: {{zakres}}. Obejmij organizację dokumentów, pełnomocnictwa, harmonogram, obszary ryzyka, komunikację z organem oraz prawa i obowiązki podatnika.",
+  v:[{k:"rodzaj",l:"Rodzaj",type:"select",o:["kontrola podatkowa (urząd skarbowy)","kontrola celno-skarbowa","czynności sprawdzające","wewnętrzny przegląd podatkowy"]},{k:"zakres",l:"Zakres",ex:"VAT za 2024, odliczenia od faktur zakupowych"}],
+  fmt:"Plan działań w fazach (przed, w trakcie, po), indeks dokumentów (struktura folderów), mapa ryzyk, wzór rejestru przekazanych dokumentów."},
+ {id:"tax-strategy",a:"tax",t:"Strategia podatkowa",min:40,d:"Opracowanie i udokumentowanie strategii podatkowej.",
+  role:"partner ds. doradztwa podatkowego",
+  task:"Opracuj strategię podatkową dla: {{podmiot}}. Cele: {{cele}}. Przeanalizuj legalne opcje (np. ulga B+R, IP Box, estoński CIT, ulga na robotyzację, grupa VAT), wymogi MDR, klauzulę przeciwko unikaniu opodatkowania oraz obowiązek publikacji informacji o realizowanej strategii podatkowej (art. 27c ustawy o CIT), jeśli dotyczy.",
+  v:[{k:"podmiot",l:"Podmiot",ex:"spółka software house, 120 osób, własne produkty SaaS"},{k:"cele",l:"Cele",ex:"obniżenie efektywnej stopy podatkowej przy niskim ryzyku sporu"}],
+  fmt:"Tabela opcji: rozwiązanie | warunki | szacowana korzyść | ryzyko | nakład pracy; mapa drogowa wdrożenia; szkic dokumentu strategii podatkowej."},
+ {id:"tax-ksef",a:"tax",t:"KSeF bez stresu",min:30,nw:true,d:"Gotowość do KSeF, weryfikacja e-faktur, obieg i procedury awaryjne.",
+  role:"ekspert ds. Krajowego Systemu e-Faktur i integracji ERP",
+  task:"Pomóż w temacie KSeF: {{temat}}. Uwzględnij strukturę logiczną FA(3), uprawnienia i tokeny, tryby awaryjne i offline, obieg faktur zakupowych, integrację z systemem {{erp}} i kontrolę jakości danych. Zaznacz, które daty i wymogi trzeba potwierdzić w aktualnych komunikatach Ministerstwa Finansów.",
+  v:[{k:"temat",l:"Temat",type:"select",o:["ocena gotowości firmy do KSeF","procedura obiegu faktur zakupowych z KSeF","procedura awaryjna i tryb offline","weryfikacja poprawności e-faktury (wklej XML)","szkolenie dla zespołu księgowości"]},{k:"erp",l:"System ERP",ex:"",prof:"erp"},DATA],
+  fmt:"Checklista, proces krok po kroku (kto, co, w jakim systemie), tabela ryzyk, FAQ dla zespołu."},
+ // ——— AP/AR
+ {id:"ap-invoice",a:"ap",t:"Przetwarzanie faktur",min:25,d:"Usprawnienie obiegu faktur i odczyt danych z faktury.",
+  role:"kierownik działu księgowości zobowiązań (AP)",
+  task:"Zaprojektuj usprawniony obieg faktur dla: {{zakres}}. Stan obecny: {{stan}}. Uwzględnij KSeF, dopasowanie trójstronne (zamówienie, przyjęcie, faktura), akceptacje według progów, białą listę VAT, podzieloną płatność i archiwizację. Jeśli załączono obraz lub treść faktury, wyodrębnij dane (sprzedawca, NIP, numer, daty, pozycje, netto, VAT, brutto, rachunek) i sprawdź ich spójność.",
+  v:[{k:"zakres",l:"Zakres",ex:"faktury kosztowe, ok. 1 200 miesięcznie"},{k:"stan",l:"Stan obecny",type:"textarea",ex:"akceptacje mailowe, ręczne księgowanie, opóźnienia 10–15 dni"}],
+  fmt:"Proces docelowy krok po kroku, macierz akceptacji, KPI (czas cyklu, koszt obsługi faktury), checklista wdrożenia. Dla faktury: tabela danych i wykryte niezgodności."},
+ {id:"ap-remind",a:"ap",t:"Przypomnienia o płatnościach",min:15,d:"Sekwencja automatycznych przypomnień i wezwań do zapłaty.",
+  role:"specjalista ds. windykacji polubownej (credit controller)",
+  task:"Przygotuj sekwencję przypomnień o płatności dla klienta: {{klient}}. Zaległość: {{kwota}}, dni po terminie: {{dni}}. Ton: {{ton}}. Uwzględnij odsetki za opóźnienie w transakcjach handlowych i rekompensatę za koszty odzyskiwania należności, jeśli to zasadne.",
+  v:[{k:"klient",l:"Klient",ex:"Hurtownia Delta sp. z o.o."},{k:"kwota",l:"Kwota zaległości",ex:"48 600 zł (3 faktury)"},{k:"dni",l:"Dni po terminie",ex:"12"},{k:"ton",l:"Ton",type:"select",o:["uprzejmy","stanowczy","ostateczne wezwanie"]}],
+  fmt:"Trzy wiadomości (przed terminem, +7 dni, +21 dni) z tematami, szkic przedsądowego wezwania do zapłaty, reguły automatyzacji (warunek → akcja)."},
+ {id:"ap-vendor",a:"ap",t:"Komunikacja z dostawcami",min:10,d:"Szablony wiadomości do dostawców w sprawie płatności.",
+  role:"kierownik ds. zobowiązań",
+  task:"Przygotuj wiadomość do dostawcy {{dostawca}} w sprawie: {{sprawa}}. Zachowaj dobre relacje, jasno podaj fakty, kwoty, oczekiwane działanie i termin. Szczegóły: {{szczegoly}}.",
+  v:[{k:"dostawca",l:"Dostawca",ex:"TransLog S.A."},{k:"sprawa",l:"Sprawa",type:"select",o:["prośba o wydłużenie terminu płatności","korekta faktury","potwierdzenie salda","weryfikacja zmiany rachunku bankowego (ochrona przed oszustwem)","harmonogram spłaty"]},{k:"szczegoly",l:"Szczegóły",type:"textarea",ex:"faktura FV/2026/08/114 na 23 400 zł, zawyżona stawka za paletę"}],
+  fmt:"Gotowy e-mail (temat i treść), krótka wersja do Teams, checklista przed wysyłką."},
+ {id:"ap-recon",a:"ap",t:"Pomoc w uzgodnieniach",min:35,d:"Uzgadnianie rozrachunków, wyciągów i kont przejściowych.",
+  role:"starszy księgowy ds. rozrachunków",
+  task:"Przeprowadź uzgodnienie: {{rodzaj}} za {{okres}}. Porównaj dostarczone zestawienia, dopasuj pozycje (kwota, data, numer dokumentu), wskaż różnice i ich prawdopodobne przyczyny (różnice kursowe, płatności w drodze, brak faktury, duplikaty).",
+  v:[{k:"rodzaj",l:"Rodzaj uzgodnienia",type:"select",o:["saldo z kontrahentem","wyciąg bankowy vs księga","konto rozrachunkowe vs subkonta","konto przejściowe"]},{k:"okres",l:"Okres",ex:"31.08.2026"},DATA],
+  fmt:"Tabela dopasowań, tabela różnic z przyczyną i proponowanym księgowaniem, wzór potwierdzenia salda."},
+ // ——— Kontroler
+ {id:"ctl-gl",a:"ctl",t:"Nadzór nad księgą główną",min:35,d:"Utrzymanie i weryfikacja integralności księgi głównej.",
+  role:"główny księgowy",
+  task:"Przygotuj procedurę zamknięcia i przeglądu księgi głównej za {{okres}} w systemie {{erp}}. Obejmij kontrole kompletności, uzgodnienia kont, salda nietypowe, ręczne dekrety, rozliczenia międzyokresowe, rezerwy i różnice kursowe.",
+  v:[{k:"okres",l:"Okres",ex:"wrzesień 2026"},{k:"erp",l:"System ERP",ex:"",prof:"erp"}],
+  fmt:"Checklista zamknięcia miesiąca (dzień D+1 do D+5, odpowiedzialny), lista testów analitycznych, wzór dziennika zmian."},
+ {id:"ctl-compliance",a:"ctl",t:"Monitorowanie zgodności",min:30,d:"Checklista zgodności finansowej dopasowana do przepisów.",
+  role:"kontroler finansowy ds. zgodności",
+  task:"Przygotuj listę kontrolną zgodności finansowej dla podmiotu: {{podmiot}}. Obszary: {{obszary}}.",
+  v:[{k:"podmiot",l:"Podmiot",ex:"sp. z o.o., średnie przedsiębiorstwo"},{k:"obszary",l:"Obszary",type:"textarea",ex:"ustawa o rachunkowości, VAT i KSeF, AML, kowenanty bankowe, terminy zapłaty w transakcjach handlowych, sprawozdawczość GUS i NBP"}],
+  fmt:"Tabela: obowiązek | podstawa prawna | termin lub częstotliwość | właściciel | dowód wykonania | status [ ]; kalendarz roczny."},
+ {id:"ctl-report",a:"ctl",t:"Sprawozdawczość finansowa",min:40,d:"Szablony sprawozdań i dobre praktyki zapewniające dokładność.",
+  role:"biegły rewident i ekspert sprawozdawczości",
+  task:"Przygotuj szablon i procedurę sporządzenia: {{sprawozdanie}} za {{okres}} według: {{standard}}. Uwzględnij noty, informację dodatkową, sprawozdanie z działalności, terminy (sporządzenie, zatwierdzenie, złożenie do KRS) i kontrole spójności.",
+  v:[{k:"sprawozdanie",l:"Sprawozdanie",type:"select",o:["roczne sprawozdanie finansowe","sprawozdanie śródroczne","sprawozdanie skonsolidowane","pakiet raportowy dla grupy"]},{k:"okres",l:"Okres",ex:"rok 2026"},{k:"standard",l:"Standard",ex:"",prof:"standard"}],
+  fmt:"Struktura dokumentu, lista uzgodnień krzyżowych (bilans, RZiS, rachunek przepływów, zestawienie zmian w kapitale), harmonogram, checklista jakości."},
+ {id:"ctl-esg",a:"ctl",t:"Raportowanie ESG",min:40,nw:true,d:"CSRD i ESRS: podwójna istotność, wskaźniki, ślad węglowy.",
+  role:"ekspert ds. raportowania zrównoważonego rozwoju",
+  task:"Pomóż przygotować: {{element}} dla spółki, która raportuje lub przygotowuje się do raportowania zrównoważonego rozwoju. Uwzględnij podwójną istotność, standardy ESRS (z uproszczeniami pakietu Omnibus, jeśli dotyczą; oznacz je do weryfikacji), emisje z zakresów 1–3 i powiązanie z danymi finansowymi.",
+  v:[{k:"element",l:"Element",type:"select",o:["analiza podwójnej istotności","mapa wskaźników i źródeł danych","obliczenie śladu węglowego (zakres 1–2)","harmonogram wdrożenia raportowania","szkic rozdziału raportu"]},DATA],
+  fmt:"Tabela tematów lub wskaźników, źródła danych i właściciele, luki, plan wdrożenia."},
+ {id:"ctl-ic",a:"ctl",t:"Kontrola wewnętrzna",min:35,d:"Przegląd i wzmocnienie kontroli wewnętrznych.",
+  role:"kontroler finansowy i ekspert kontroli wewnętrznej",
+  task:"Oceń i wzmocnij kontrole wewnętrzne w procesie: {{proces}}. Opisz ryzyka (co może pójść źle), istniejące i brakujące kontrole (prewencyjne i detekcyjne, manualne i automatyczne), podział obowiązków i uprawnienia w systemie.",
+  v:[{k:"proces",l:"Proces",ex:"zakupy i płatności (purchase-to-pay)"}],
+  fmt:"Macierz ryzyk i kontroli: ryzyko | kontrola | typ | częstotliwość | właściciel | dowód; luki i rekomendacje z priorytetem."},
+ // ——— Audyt
+ {id:"aud-risk",a:"aud",t:"Ocena ryzyka",min:35,d:"Kompleksowa ocena ryzyka finansowego krok po kroku.",
+  role:"kierownik audytu wewnętrznego",
+  task:"Przeprowadź ocenę ryzyka finansowego dla: {{zakres}}. Obejmij ryzyko płynności, kredytowe, walutowe, stopy procentowej, operacyjne, nadużyć i regulacyjne. Oceń prawdopodobieństwo i wpływ w skali 1–5.",
+  v:[{k:"zakres",l:"Zakres",ex:"spółka eksportowa, 70% sprzedaży w EUR"},DATA],
+  fmt:"Rejestr ryzyk (tabela), opis mapy ciepła, pięć najważniejszych ryzyk z planem ograniczania, kluczowe wskaźniki ryzyka (KRI)."},
+ {id:"aud-plan",a:"aud",t:"Planowanie audytu",min:35,d:"Planowanie i dokumentowanie audytów wewnętrznych.",
+  role:"kierownik audytu wewnętrznego (CIA)",
+  task:"Zaplanuj audyt wewnętrzny obszaru: {{obszar}}. Czas na audyt: {{czas}}. Określ cel, zakres, kryteria, ryzyka, metodykę (wywiady, próby, analityka danych), zasoby i harmonogram.",
+  v:[{k:"obszar",l:"Obszar",ex:"rozliczanie delegacji i kart płatniczych"},{k:"czas",l:"Czas",ex:"3 tygodnie, 2 audytorów"}],
+  fmt:"Karta audytu, program audytu (krok | test | próba | dowód), harmonogram, lista dokumentów do przygotowania przez klienta (PBC)."},
+ {id:"aud-test",a:"aud",t:"Testowanie kontroli",min:30,d:"Procedura testowania skuteczności kontroli finansowych.",
+  role:"audytor wewnętrzny",
+  task:"Zaprojektuj test skuteczności kontroli: {{kontrola}}. Określ test projektu i test działania, dobór próby (zależny od częstotliwości kontroli), atrybuty do sprawdzenia, kryteria oceny i dokumentację.",
+  v:[{k:"kontrola",l:"Kontrola",ex:"akceptacja przelewów powyżej 50 000 zł przez dwie osoby"}],
+  fmt:"Arkusz testu (krok, atrybut, wynik), tabela wielkości prób, kryteria wyjątku, wzór wniosku z testu."},
+ {id:"aud-anom",a:"aud",t:"Wykrywanie anomalii",min:40,nw:true,d:"Duplikaty, podział kwot, prawo Benforda i nietypowe płatności.",
+  role:"audytor śledczy (forensic) i analityk danych",
+  task:"Przeanalizuj transakcje pod kątem anomalii i sygnałów nadużyć: duplikaty, kwoty tuż poniżej progów akceptacji ({{progi}}), płatności w weekendy, nowi dostawcy z dużymi kwotami, okrągłe kwoty, odchylenia od rozkładu Benforda, rachunki spoza białej listy VAT.",
+  v:[{k:"progi",l:"Progi akceptacji",ex:"do 10 000 zł kierownik, powyżej dyrektor"},{...DATA,opt:false,l:"Transakcje (CSV lub wklej)"}],
+  fmt:"Tabela podejrzanych pozycji (id | reguła | uzasadnienie | poziom ryzyka), statystyki, zalecane dalsze testy, reguły do stałego monitoringu."},
+ {id:"aud-issue",a:"aud",t:"Dokumentowanie ustaleń",min:20,d:"Szablon dokumentowania ustaleń i rekomendacji z audytu.",
+  role:"audytor wewnętrzny",
+  task:"Udokumentuj ustalenie z audytu: {{ustalenie}}. Użyj struktury: stan faktyczny, kryterium, przyczyna, skutek, rekomendacja. Nadaj ocenę istotności.",
+  v:[{k:"ustalenie",l:"Ustalenie",type:"textarea",ex:"w 7 z 40 zbadanych płatności brak drugiej akceptacji mimo przekroczenia progu"}],
+  fmt:"Karta ustalenia, rekomendacja SMART, proponowana odpowiedź kierownictwa z terminem i właścicielem."},
+ // ——— Produktywność (pierścień: Zwiększ produktywność)
+ {id:"day-email",a:"day",t:"E-maile w kilka sekund",min:10,d:"Gotowy e-mail z tematem i krótszą alternatywą.",
+  role:"doświadczony specjalista ds. finansów piszący zwięźle",
+  task:"Napisz e-mail do: {{adresat}} w sprawie: {{sprawa}}. Kluczowe informacje: {{punkty}}. Ton: {{ton}}.",
+  v:[{k:"adresat",l:"Adresat",ex:"dyrektor sprzedaży"},{k:"sprawa",l:"Sprawa",ex:"przekroczenie budżetu marketingu w sierpniu"},{k:"punkty",l:"Kluczowe informacje",type:"textarea",ex:"+31% vs budżet, główna przyczyna kampania targowa, prośba o plan na IV kwartał do piątku"},{k:"ton",l:"Ton",type:"select",o:["rzeczowy","formalny","przyjazny"]}],
+  fmt:"Temat i treść (do 150 słów) oraz krótsza wersja alternatywna."},
+ {id:"day-wording",a:"day",t:"Korekta sformułowań",min:8,d:"Poprawa języka, jasności i tonu tekstu.",
+  role:"redaktor tekstów finansowych i biznesowych",
+  task:"Popraw poniższy tekst pod względem języka, jasności i profesjonalnego tonu. Zachowaj sens i wszystkie liczby. Cel tekstu: {{cel}}.\n\nTekst:\n{{tekst}}",
+  v:[{k:"cel",l:"Cel tekstu",ex:"komentarz do wyników dla zarządu"},{k:"tekst",l:"Tekst do poprawy",type:"textarea",ex:"W sierpniu przychody były niższe niż planowalismy bo klienci przesuneli zamówienia, ale za to koszty tez spadły wiec wynik jest w miare ok."}],
+  fmt:"Wersja poprawiona, a pod nią do 5 najważniejszych zmian."},
+ {id:"day-summary",a:"day",t:"Streszczenie dokumentu",min:15,d:"Streszczenie umowy, raportu lub protokołu z kluczowymi liczbami.",
+  role:"analityk finansowy przygotowujący notatki dla zarządu",
+  task:"Streść dokument (wklejony lub załączony) dla odbiorcy: {{odbiorca}}. Skup się na: {{fokus}}.\n\nDokument:\n{{tekst}}",
+  v:[{k:"odbiorca",l:"Odbiorca",ex:"prezes zarządu"},{k:"fokus",l:"Na czym się skupić",ex:"zobowiązania finansowe, terminy, kary umowne"},{k:"tekst",l:"Treść dokumentu",type:"data",ex:"",opt:true}],
+  fmt:"TL;DR w 2 zdaniach, tabela kluczowych liczb, decyzje i ryzyka, pytania otwarte."},
+ {id:"day-ask",a:"day",t:"Wolne pytanie",min:10,d:"Dowolne pytanie z automatycznym kontekstem firmy i Twoimi regułami.",
+  role:"wszechstronny ekspert finansów, księgowości i podatków w Polsce",
+  task:"{{pytanie}}",
+  v:[{k:"pytanie",l:"Twoje pytanie",type:"textarea",ex:"Jak ująć w księgach otrzymaną dotację na zakup środka trwałego?"},DATA],
+  fmt:"Odpowiedź dopasowana do pytania: najpierw konkretna odpowiedź, potem uzasadnienie."},
+ // ——— Komunikacja z interesariuszami
+ {id:"stk-guide",a:"stk",t:"Wytyczne budżetowe",min:25,d:"Instrukcja budżetowa dla kierowników działów.",
+  role:"kierownik ds. budżetowania",
+  task:"Przygotuj wytyczne budżetowe dla kierowników działów na {{okres}}: założenia makroekonomiczne, limity, terminy, format przekazania danych i zasady uzasadniania wydatków. Dodatkowe założenia: {{zalozenia}}.",
+  v:[{k:"okres",l:"Okres",ex:"rok 2027"},{k:"zalozenia",l:"Założenia",type:"textarea",ex:"inflacja 3,5%, wzrost płac do 6%, CAPEX tylko z uzasadnieniem zwrotu poniżej 3 lat"}],
+  fmt:"Dokument gotowy do wysłania: wstęp, założenia (tabela), harmonogram, szablon zgłoszenia, FAQ."},
+ {id:"stk-input",a:"stk",t:"Prośba o dane",min:10,d:"Uprzejma i skuteczna prośba o przekazanie danych.",
+  role:"kontroler finansowy",
+  task:"Napisz prośbę do: {{kto}} o przekazanie danych: {{lista}} do {{termin}} w formacie: {{format}}. Wyjaśnij cel i konsekwencje opóźnienia.",
+  v:[{k:"kto",l:"Do kogo",ex:"kierownicy zakładów"},{k:"lista",l:"Jakie dane",type:"textarea",ex:"stany zapasów na koniec miesiąca, zapasy wolno rotujące powyżej 180 dni"},{k:"termin",l:"Termin",ex:"3.10.2026, godz. 12:00"},{k:"format",l:"Format",ex:"plik Excel według załączonego szablonu"}],
+  fmt:"E-mail z tematem, lista wymaganych danych w punktach, krótkie przypomnienie na dzień przed terminem."},
+ {id:"stk-meeting",a:"stk",t:"Przygotowanie spotkania",min:15,d:"Agenda, cele, materiały i szablon notatki.",
+  role:"CFO prowadzący efektywne spotkania",
+  task:"Przygotuj spotkanie: {{temat}}. Uczestnicy: {{uczestnicy}}. Czas: {{czas}}.",
+  v:[{k:"temat",l:"Temat",ex:"przegląd wyników za III kwartał"},{k:"uczestnicy",l:"Uczestnicy",ex:"zarząd, dyrektorzy działów"},{k:"czas",l:"Czas",ex:"60 minut"}],
+  fmt:"Agenda z czasem na punkt, cel i oczekiwane decyzje, materiały do przeczytania przed spotkaniem, szablon notatki i listy zadań."},
+ // ——— Plany efektywności
+ {id:"perf-sales",a:"perf",t:"Analiza sprzedaży",min:30,d:"Struktura, rentowność i koncentracja sprzedaży.",
+  role:"analityk sprzedaży i rentowności",
+  task:"Przeanalizuj sprzedaż w przekroju: {{wymiar}} za {{okres}}. Oceń strukturę, rentowność, koncentrację klientów (Pareto, ABC), trendy i rabaty.",
+  v:[{k:"wymiar",l:"Przekrój",ex:"klienci i grupy produktowe"},{k:"okres",l:"Okres",ex:"01–08.2026"},DATA],
+  fmt:"Kluczowe wnioski, tabele ABC, lista klientów lub produktów do działań, rekomendacje cenowe."},
+ {id:"perf-vendor",a:"perf",t:"Zarządzanie dostawcami",min:25,d:"Koncentracja, warunki płatności i negocjacje.",
+  role:"menedżer ds. zakupów i finansów",
+  task:"Oceń bazę dostawców w kategorii: {{kategoria}}. Przeanalizuj koncentrację, warunki płatności, ryzyko, możliwości negocjacji i konsolidacji.",
+  v:[{k:"kategoria",l:"Kategoria",ex:"usługi transportowe"},DATA],
+  fmt:"Segmentacja dostawców, tabela ryzyk, plan negocjacji z celami (cena, termin płatności), szybkie wygrane."},
+ {id:"perf-process",a:"perf",t:"Usprawnianie procesów",min:30,d:"Lean, automatyzacja i AI w procesach finansowych.",
+  role:"konsultant ds. transformacji finansów",
+  task:"Zaprojektuj usprawnienie procesu finansowego: {{proces}}. Obecny problem: {{problem}}. Wskaż marnotrawstwo (Lean), możliwości automatyzacji (RPA, integracje, API KSeF, bankowość API, AI) oraz wpływ na czas i koszt.",
+  v:[{k:"proces",l:"Proces",ex:"zamknięcie miesiąca"},{k:"problem",l:"Problem",ex:"zamknięcie trwa 9 dni roboczych"}],
+  fmt:"Mapa obecnego i docelowego procesu, lista usprawnień (wpływ | nakład | priorytet), plan na 30/60/90 dni."},
+ // ——— Samouczki narzędzi
+ {id:"tool-excel",a:"tool",t:"Excel",min:15,d:"Formuły, Power Query, LAMBDA i Python w Excelu.",
+  role:"trener Excela dla działów finansowych",
+  task:"Pokaż, jak w Excelu: {{zadanie}}. Wersja: {{wersja}}. Podaj gotowe formuły (polskie nazwy funkcji ze średnikiem i odpowiedniki angielskie) oraz alternatywy: tablice dynamiczne, LET/LAMBDA, Power Query, Python w Excelu, tabele przestawne.",
+  v:[{k:"zadanie",l:"Co chcesz zrobić",type:"textarea",ex:"dopasować wpłaty z wyciągu do faktur po kwocie i numerze faktury w tytule"},{k:"wersja",l:"Wersja",type:"select",o:["Microsoft 365 (polski)","Microsoft 365 (angielski)","Excel 2021","Arkusze Google"]}],
+  fmt:"Rozwiązanie krok po kroku, formuły w blokach kodu, typowe błędy, wariant zaawansowany."},
+ {id:"tool-ppt",a:"tool",t:"PowerPoint",min:20,d:"Struktura prezentacji finansowej slajd po slajdzie.",
+  role:"konsultant przygotowujący prezentacje dla zarządów",
+  task:"Zaprojektuj prezentację: {{temat}} dla: {{odbiorca}}, {{liczba}} slajdów. Zasada: jeden slajd to jedna teza z tytułem w formie wniosku.",
+  v:[{k:"temat",l:"Temat",ex:"wyniki za III kwartał 2026"},{k:"odbiorca",l:"Odbiorca",ex:"rada nadzorcza"},{k:"liczba",l:"Liczba slajdów",ex:"8"}],
+  fmt:"Tabela: nr | tytuł-teza | treść | wizualizacja | notatki mówcy."},
+ {id:"tool-outlook",a:"tool",t:"Outlook",min:10,d:"Reguły, szybkie kroki, szablony i blokowanie czasu.",
+  role:"trener produktywności Microsoft 365",
+  task:"Pomóż zorganizować pracę w Outlooku: {{problem}}. Uwzględnij reguły, szybkie kroki, kategorie, szablony, planowanie wysyłki i blokowanie czasu na zamknięcie miesiąca.",
+  v:[{k:"problem",l:"Problem",type:"textarea",ex:"setki maili z fakturami i akceptacjami, gubię prośby zarządu"}],
+  fmt:"Konfiguracja krok po kroku, gotowe reguły (warunek → akcja), tygodniowy rytm pracy."}
+];
+const byId = Object.fromEntries(T.map(t=>[t.id,t]));
+const areaName = id => (AREAS.find(a=>a.id===id)||{}).name||"";
+
+/* =========================================================
+   2. PAMIĘĆ (samouczenie) — localStorage z bezpiecznym fallbackiem
+   ========================================================= */
+const KEY = "godzina-finansisty.v1";
+const blank = () => ({profile:{}, lessons:[], stats:{}, values:{}, hist:{}, log:[], mode:{}, apiModel:"claude-sonnet-5"});
+let M = blank();
+let memoryOk = true;
+try { const raw = localStorage.getItem(KEY); if (raw) M = Object.assign(blank(), JSON.parse(raw)); }
+catch { memoryOk = false; }
+let saveTimer;
+function persist(){ clearTimeout(saveTimer); saveTimer = setTimeout(()=>{ try{ localStorage.setItem(KEY, JSON.stringify(M)); }catch{ memoryOk=false; } },150); }
+let sessionKey = "";
+try { sessionKey = sessionStorage.getItem(KEY+".k") || localStorage.getItem(KEY+".k") || ""; } catch {}
+
+const PROFILE_FIELDS = [
+  {k:"firma",l:"Nazwa firmy",ph:"np. Alfa Produkcja sp. z o.o."},
+  {k:"branza",l:"Branża",ph:"np. produkcja opakowań"},
+  {k:"wielkosc",l:"Wielkość",type:"select",o:["","mikro","małe","średnie","duże","grupa kapitałowa"]},
+  {k:"forma",l:"Forma prawna",type:"select",o:["","sp. z o.o.","S.A.","spółka osobowa","JDG","fundacja / stowarzyszenie"]},
+  {k:"standard",l:"Standard rachunkowości",type:"select",o:["ustawa o rachunkowości","MSSF / IFRS","US GAAP","uproszczona ewidencja (KPiR)"]},
+  {k:"waluta",l:"Waluta raportowania",ph:"PLN"},
+  {k:"rok",l:"Rok obrotowy",ph:"kalendarzowy"},
+  {k:"erp",l:"System ERP / FK",ph:"np. Comarch ERP XL, Symfonia, enova365, SAP"},
+  {k:"rola",l:"Twoja rola",ph:"np. kontroler finansowy"},
+  {k:"ton",l:"Preferowany styl",type:"select",o:["rzeczowy i zwięzły","formalny","szczegółowy z wyjaśnieniami"]},
+  {k:"notatki",l:"Stałe informacje (wide)",type:"textarea",ph:"np. VAT kwartalny, 3 zakłady, eksport do DE i CZ, kredyt z kowenantem dług netto/EBITDA < 3"}
+];
+
+/* ——— rekomendacje: uczenie z użycia + kalendarz finansisty ——— */
+function calendarHints(d=new Date()){
+  const day=d.getDate(), m=d.getMonth()+1, h={};
+  const add=(id,why)=>{ (h[id] ||= []).push(why); };
+  if (day<=8){ ["ctl-gl","ap-recon","bud-var","fa-report"].forEach(id=>add(id,"zamknięcie miesiąca")); }
+  if (day>=15 && day<=25){ add("tax-filing","JPK_V7 do 25. dnia"); }
+  if (day>=14 && day<=20){ add("bud-cash13","ZUS i PIT do 20. dnia"); }
+  if (m>=1 && m<=3){ add("ctl-report","sezon sprawozdań rocznych"); add("tax-filing","sezon CIT-8"); }
+  if (m>=9 && m<=11){ add("bud-create","sezon budżetowy"); add("stk-guide","sezon budżetowy"); }
+  if (m===12 || m===1){ add("aud-plan","plan audytów na nowy rok"); }
+  return h;
+}
+function score(id){
+  const s=M.stats[id]; if(!s) return 0;
+  const days=(Date.now()-(s.last||0))/864e5;
+  return s.uses + 3*(s.likes||0) - 2*(s.dislikes||0) + (days<7?2:0) + (s.custom?1:0);
+}
+function recommended(){
+  const cal=calendarHints();
+  const scored=T.map(t=>({t, s:score(t.id)+(cal[t.id]?1.5:0), why:[...(cal[t.id]||[])]}));
+  scored.forEach(x=>{ const s=M.stats[x.t.id]; if(s){ if(s.uses) x.why.unshift(`użyte ${s.uses}×`); if(s.likes) x.why.push(`trafione ${s.likes}×`);} });
+  let list=scored.filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,6);
+  if(!list.length) list=["bud-var","day-email","tax-ksef","ap-recon","fa-trend","day-summary"].map(id=>({t:byId[id],why:["polecane na start"]}));
+  return list;
+}
+
+/* =========================================================
+   3. BUDOWA PROMPTU — struktura XML, najlepsze praktyki dla Claude
+   ========================================================= */
+const MODE_TXT = {
+  do:"Wykonaj zadanie na podstawie dostarczonych danych. Jeśli danych brakuje, przyjmij jawne, rozsądne założenia i oznacz je, a brakujące wartości zapisz jako [DO UZUPEŁNIENIA].",
+  guide:"Przygotuj przewodnik krok po kroku, jak samodzielnie wykonać to zadanie: kolejne kroki, potrzebne dane i ich źródła, techniki, narzędzia (Excel, ERP), typowe błędy i sposób weryfikacji wyniku.",
+  check:"Przygotuj zwięzłą listę kontrolną do wykonania zadania z polami [ ], pogrupowaną w etapy, z kolumną na osobę odpowiedzialną i termin."
+};
+function fmtDate(d=new Date()){ return d.toLocaleDateString("pl-PL",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+function activeLessons(taskId){
+  const on=M.lessons.filter(l=>!l.off);
+  return { global:on.filter(l=>l.scope==="global").slice(-10), task:on.filter(l=>l.scope===taskId).slice(-10) };
+}
+function buildPrompt(task, vals, mode, attText){
+  const P=M.profile||{};
+  const fill=s=>s.replace(/\{\{(\w+)\}\}/g,(_,k)=>{ const v=(vals[k]||"").trim(); return v || `[${(task.v.find(x=>x.k===k)||{}).l||k}: DO UZUPEŁNIENIA]`; });
+  const ctx=PROFILE_FIELDS.filter(f=>P[f.k]).map(f=>`- ${f.l.replace(" (wide)","")}: ${P[f.k]}`);
+  const inputs=task.v.filter(x=>vals[x.k] && !task.task.includes(`{{${x.k}}}`)).map(x=>`<${x.k}>\n${vals[x.k].trim()}\n</${x.k}>`);
+  const L=activeLessons(task.id);
+  const out=[];
+  out.push(`<rola>\nJesteś: ${task.role}. Pracujesz dla polskiej firmy i znasz polskie przepisy (ustawa o rachunkowości, VAT, CIT, PIT, Ordynacja podatkowa, KSeF) oraz MSSF.\n</rola>`);
+  if(ctx.length) out.push(`<kontekst_firmy>\n${ctx.join("\n")}\n</kontekst_firmy>`);
+  out.push(`<zadanie>\n${fill(task.task)}\n</zadanie>`);
+  out.push(`<tryb>\n${MODE_TXT[mode]}\n</tryb>`);
+  if(inputs.length || attText) out.push(`<dane_wejsciowe>\n${inputs.join("\n")}${attText?(inputs.length?"\n":"")+attText:""}\n</dane_wejsciowe>`);
+  const req=[
+    "Odpowiadaj po polsku, profesjonalnie i konkretnie. Zacznij od najważniejszego wniosku.",
+    "Nie wymyślaj liczb ani faktów. Wszystkie założenia wypisz jawnie.",
+    "Powołując się na przepisy, podaj akt i artykuł. Zaznacz, że stan prawny należy potwierdzić na dzień "+fmtDate()+".",
+    "Kwoty zapisuj w formacie polskim (1 234 567,89 zł), daty jako DD.MM.RRRR.",
+    "Tabele twórz w Markdown. Obliczenia pokazuj tak, aby dało się je sprawdzić.",
+    "Zakończ sekcjami „Ryzyka i uwagi” oraz „Następne kroki” (maksymalnie 5 punktów)."
+  ];
+  if(P.ton) req.push(`Styl odpowiedzi: ${P.ton}.`);
+  out.push(`<wymagania>\n${req.map(r=>"- "+r).join("\n")}\n</wymagania>`);
+  if(L.global.length||L.task.length){
+    out.push(`<preferencje_uzytkownika>\nTe reguły wynikają z wcześniejszych ocen użytkownika. Mają pierwszeństwo przed ogólnymi wymaganiami:\n${[...L.global,...L.task].map(l=>"- "+l.text).join("\n")}\n</preferencje_uzytkownika>`);
+  }
+  out.push(`<format_odpowiedzi>\n${task.fmt}\n</format_odpowiedzi>`);
+  return out.join("\n\n");
+}
+
+/* =========================================================
+   4. STAN UI
+   ========================================================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let view="for-you", query="", cur=null, mode="do", files=[], lastRun=null, counted=new Set(), sample=null, sampleImages=false, ctl=null;
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove("on"),2400); }
+
+function renderAreas(){
+  const n=a=>T.filter(t=>t.a===a).length;
+  let h=`<button data-v="for-you" class="learned" aria-pressed="${view==="for-you"}"><span>Dla Ciebie</span><span class="c">${recommended().length}</span></button>`;
+  h+=`<button data-v="all" aria-pressed="${view==="all"}"><span>Wszystkie zadania</span><span class="c">${T.length}</span></button>`;
+  h+=`<button data-v="new" aria-pressed="${view==="new"}"><span>Nowości 2026</span><span class="c">${T.filter(t=>t.nw).length}</span></button>`;
+  let g="";
+  AREAS.forEach(a=>{ if(a.grp!==g){ g=a.grp; h+=`<div class="grp">${esc(g)}</div>`; } h+=`<button data-v="${a.id}" aria-pressed="${view===a.id}"><span>${esc(a.name)}</span><span class="c">${n(a.id)}</span></button>`; });
+  $("#areas").innerHTML=h;
+}
+function cardHTML(t, why){
+  const s=M.stats[t.id]||{};
+  const pills=[`<span class="pill time num">~${t.min} min</span>`];
+  if(t.nw) pills.push(`<span class="pill new">nowość</span>`);
+  (why||[]).slice(0,2).forEach(w=>pills.push(`<span class="pill learn">${esc(w)}</span>`));
+  if(!why && s.uses) pills.push(`<span class="pill learn num">użyte ${s.uses}×</span>`);
+  const nl=M.lessons.filter(l=>l.scope===t.id&&!l.off).length;
+  if(nl) pills.push(`<span class="pill learn num">${nl} ${nl===1?"reguła":"reguły"}</span>`);
+  return `<button class="card" data-id="${t.id}" aria-current="${cur&&cur.id===t.id}"><h3>${esc(t.t)}</h3><p>${esc(t.d)}</p><div class="meta">${pills.join("")}<span>${esc(areaName(t.a))}</span></div></button>`;
+}
+function renderCatalog(){
+  const q=query.trim().toLowerCase();
+  const match=t=>!q || (t.t+" "+t.d+" "+areaName(t.a)+" "+t.task).toLowerCase().includes(q);
+  let h="";
+  if(q){
+    const list=T.filter(match);
+    h=`<div class="sec-h"><h2>Wyniki: „${esc(query)}”</h2><p class="num">${list.length} zadań</p></div>`+(list.length?`<div class="grid">${list.map(t=>cardHTML(t)).join("")}</div>`:`<div class="empty">Brak zadań. Spróbuj „Wolne pytanie” i opisz problem własnymi słowami.</div>`);
+  } else if(view==="for-you"){
+    const rec=recommended();
+    h=`<div class="sec-h"><h2>Dla Ciebie</h2><p>Kolejność uczy się z Twoich wyborów, ocen i kalendarza finansisty (dziś ${fmtDate()}).</p></div><div class="grid">${rec.map(x=>cardHTML(x.t,x.why)).join("")}</div>`;
+    AREAS.slice(0,7).forEach(a=>{ h+=`<div class="sec-h"><h2>${esc(a.name)}</h2></div><div class="grid">${T.filter(t=>t.a===a.id).map(t=>cardHTML(t)).join("")}</div>`; });
+    h+=`<div class="sec-h"><h2>Na co dzień</h2><p>Produktywność, komunikacja, plany efektywności i samouczki narzędzi.</p></div><div class="grid">${T.filter(t=>["day","stk","perf","tool"].includes(t.a)).map(t=>cardHTML(t)).join("")}</div>`;
+  } else if(view==="all"){
+    h=`<div class="sec-h"><h2>Wszystkie zadania</h2><p class="num">${T.length} zadań, średnio ${Math.round(T.reduce((s,t)=>s+t.min,0)/T.length)} min oszczędności każde</p></div><div class="grid">${T.map(t=>cardHTML(t)).join("")}</div>`;
+  } else if(view==="new"){
+    h=`<div class="sec-h"><h2>Nowości 2026</h2><p>KSeF, ESG, płynność 13-tygodniowa i wykrywanie anomalii.</p></div><div class="grid">${T.filter(t=>t.nw).map(t=>cardHTML(t)).join("")}</div>`;
+  } else {
+    h=`<div class="sec-h"><h2>${esc(areaName(view))}</h2></div><div class="grid">${T.filter(t=>t.a===view).map(t=>cardHTML(t)).join("")}</div>`;
+  }
+  $("#catalog").innerHTML=h;
+}
+
+function fieldHTML(v, val){
+  const id="f_"+v.k, hist=(M.hist[v.k]||[]);
+  const dl=hist.length&&(!v.type||v.type==="text")?`<datalist id="dl_${v.k}">${hist.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`:"";
+  let inp;
+  if(v.type==="select") inp=`<select id="${id}" name="${v.k}">${v.o.map(o=>`<option${o===val?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  else if(v.type==="textarea"||v.type==="data") inp=`<textarea id="${id}" name="${v.k}" class="${v.type==="data"?"data":""}" placeholder="${v.type==="data"?"Wklej tabelę z Excela, CSV lub tekst…":""}">${esc(val)}</textarea>`;
+  else inp=`<input id="${id}" name="${v.k}" value="${esc(val)}" ${dl?`list="dl_${v.k}"`:""}>`;
+  return `<div class="field"><label for="${id}">${esc(v.l)}${v.opt?' <span style="color:var(--muted);font-weight:400">(opcjonalnie)</span>':""}</label>${inp}${dl}</div>`;
+}
+function openTask(id, {scroll=true, silent=false}={}){
+  cur=byId[id]; if(!cur) return;
+  mode=M.mode[id]||"do";
+  const remembered=M.values[id]||{};
+  let usedExample=false;
+  const vals={};
+  cur.v.forEach(v=>{
+    let val=remembered[v.k];
+    if(val==null && v.prof) val=M.profile[v.prof]||"";
+    if(val==null){ val=v.type==="select"?v.o[0]:(v.ex||""); if(v.ex) usedExample=true; }
+    vals[v.k]=val;
+  });
+  $("#cpArea").textContent=areaName(cur.a);
+  $("#cpTitle").textContent=cur.t;
+  $("#cpDesc").textContent=cur.d+(usedExample?" Pola wypełniono przykładem, wpisz własne dane.":"");
+  $("#fields").innerHTML=cur.v.map(v=>fieldHTML(v,vals[v.k])).join("");
+  $$("#mode button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===mode));
+  files=[]; renderFiles();
+  $("#out").hidden=true; lastRun=null;
+  renderLearnbox(); updatePreview();
+  $$(".card").forEach(c=>c.setAttribute("aria-current",c.dataset.id===id));
+  if(!silent){ $("#composer").classList.add("open"); if(scroll) $("#composer").scrollTop=0; }
+  try{ history.replaceState(null,"","#"+id); }catch{}
+}
+function readVals(){ const o={}; cur.v.forEach(v=>{ const el=document.getElementById("f_"+v.k); o[v.k]=el?el.value:""; }); return o; }
+function renderLearnbox(){
+  const L=activeLessons(cur.id), n=L.global.length+L.task.length, s=M.stats[cur.id];
+  const box=$("#learnbox");
+  if(!n && !s){ box.hidden=true; return; }
+  box.hidden=false;
+  const parts=[];
+  if(n) parts.push(`<b>Stosuję ${n} ${n===1?"regułę":"reguł"} z Twoich ocen.</b>`);
+  if(s) parts.push(`Użyte ${s.uses}×${s.likes?`, trafione ${s.likes}×`:""}.`);
+  box.innerHTML=parts.join(" ")+(L.task.length?`<ul>${L.task.slice(-3).map(l=>`<li>${esc(l.text)}</li>`).join("")}</ul>`:"");
+}
+function attachmentText(){
+  let total=0; const MAX=45000, parts=[];
+  for(const f of files){ if(f.text==null) continue; let t=f.text; if(total+t.length>MAX){ t=t.slice(0,Math.max(0,MAX-total))+"\n[… obcięto]"; } total+=t.length; parts.push(`<plik nazwa="${f.name}">\n${t}\n</plik>`); if(total>=MAX) break; }
+  const imgs=files.filter(f=>f.blob);
+  if(imgs.length) parts.push(`<obrazy>Załączono ${imgs.length} ${imgs.length===1?"obraz":"obrazy"}: ${imgs.map(f=>f.name).join(", ")}. Odczytaj z nich dane.</obrazy>`);
+  return parts.join("\n");
+}
+function currentPrompt(){ return buildPrompt(cur, readVals(), mode, attachmentText()); }
+function updatePreview(){
+  const p=currentPrompt();
+  $("#preview").textContent=p;
+  $("#promptLen").textContent=`${p.length.toLocaleString("pl-PL")} znaków`;
+  $("#openClaude").href = p.length<7000 ? "https://claude.ai/new?q="+encodeURIComponent(p) : "https://claude.ai/new";
+}
+function rememberVals(){
+  const vals=readVals(); M.values[cur.id]=vals;
+  cur.v.forEach(v=>{ const x=(vals[v.k]||"").trim(); if(!x||v.type==="select"||v.type==="data"||x.length>120) return; const h=M.hist[v.k]||[]; M.hist[v.k]=[x,...h.filter(y=>y!==x)].slice(0,8); });
+  M.mode[cur.id]=mode;
+}
+function markUse(){
+  const key=cur.id+"|"+currentPrompt().length;
+  rememberVals();
+  const s=M.stats[cur.id] ||= {uses:0,likes:0,dislikes:0};
+  s.uses++; s.last=Date.now();
+  if(!counted.has(key)){ counted.add(key); M.log.push({t:Date.now(),id:cur.id,min:cur.min}); M.log=M.log.slice(-800); }
+  persist(); renderClock(); renderLearnbox();
+}
+
+/* ——— pliki ——— */
+function renderFiles(){
+  $("#files").innerHTML=files.map((f,i)=>`<span class="chip">${esc(f.name)} <span class="num" style="color:var(--muted)">${f.blob?"obraz":(f.text==null?"…":Math.round(f.text.length/1000)+" tys. zn.")}</span><button type="button" data-rm="${i}" aria-label="Usuń ${esc(f.name)}">×</button></span>`).join("");
+}
+let xlsxP=null;
+function loadXLSX(){ return xlsxP ||= new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload=()=>res(window.XLSX); s.onerror=()=>{xlsxP=null;rej(new Error("xlsx"));}; document.head.appendChild(s); }); }
+async function addFiles(list){
+  for(const file of list){
+    const name=file.name, ext=name.split(".").pop().toLowerCase();
+    if(file.type.startsWith("image/")){ files.push({name,blob:file}); if(!sampleImages) toast("Obrazy przeanalizuje tylko Claude w artefakcie. W trybie kopiowania dołącz je ręcznie."); continue; }
+    const entry={name,text:null}; files.push(entry); renderFiles();
+    try{
+      if(ext==="xlsx"||ext==="xls"){
+        const X=await loadXLSX(); const wb=X.read(await file.arrayBuffer(),{type:"array"});
+        entry.text=wb.SheetNames.map(n=>`# Arkusz: ${n}\n`+X.utils.sheet_to_csv(wb.Sheets[n],{FS:";"})).join("\n\n");
+      } else entry.text=await file.text();
+    }catch{ files.splice(files.indexOf(entry),1); toast(`Nie udało się odczytać ${name}. Zapisz plik jako CSV i spróbuj ponownie.`); }
+  }
+  renderFiles(); updatePreview();
+}
+
+/* =========================================================
+   5. URUCHAMIANIE: Claude w artefakcie → API → kopiuj
+   ========================================================= */
+async function initSample(){
+  try{
+    if(!window.claude || typeof window.claude.use!=="function") return;
+    sample=await window.claude.use("sample");
+    if(sample){ const lim=await sample.limits().catch(()=>null); sampleImages=!!(lim&&lim.images); }
+  }catch{ sample=null; }
+  renderConn();
+}
+function renderConn(){
+  const k=$("#apiKey").value||sessionKey;
+  $("#connInfo").textContent = sample ? "Połączono: odpowiedzi generuje Claude na Twoim koncie claude.ai. Klucz API nie jest potrzebny."
+    : k ? "Wersja samodzielna: odpowiedzi przez API Anthropic z Twoim kluczem."
+    : "Brak bezpośredniego połączenia. Przycisk „Uruchom” skopiuje prompt i otworzy claude.ai. Możesz też podać klucz API.";
+}
+function setBusy(b){ $("#runBtn").disabled=b; $("#stopBtn").hidden=!b; }
+const ERR={not_granted:"Nie zezwolono na użycie Claude na tej stronie. Skopiuj prompt i wklej go w claude.ai.",rate_limited:"Za dużo zapytań naraz. Poczekaj chwilę i spróbuj ponownie.",prompt_too_large:"Dane są za duże. Skróć załączniki lub wklej mniej wierszy.",cancelled:"Zatrzymano."};
+
+async function run(){
+  if(!cur) return;
+  const prompt=currentPrompt();
+  markUse();
+  $("#out").hidden=false; $("#editWrap").hidden=true; $("#rateNoteWrap").hidden=true;
+  $$("#rate .rbtn").forEach(b=>b.setAttribute("aria-pressed","false"));
+  const outEl=$("#outMd");
+  lastRun={id:cur.id,prompt,text:"",rated:null};
+  const key=$("#apiKey").value||sessionKey;
+  if(sample){
+    ctl=new AbortController(); setBusy(true);
+    outEl.innerHTML=`<p style="color:var(--muted)">Claude analizuje… pierwsze zdania pojawią się za kilkanaście sekund.</p>`;
+    $("#status").textContent="";
+    try{
+      const opts={signal:ctl.signal,onText:({text})=>{ lastRun.text=text; outEl.innerHTML=md(text); },modelTier:["cfo-ma","cfo-strat","tax-strategy","aud-anom","fa-scen"].includes(cur.id)?"complex":"default"};
+      const imgs=files.filter(f=>f.blob).map(f=>f.blob);
+      if(imgs.length && sampleImages) opts.images=imgs;
+      const r=await sample(prompt,opts);
+      lastRun.text=r.text; outEl.innerHTML=md(r.text);
+      if(r.truncated) $("#status").textContent="Odpowiedź została skrócona. Poproś o mniej naraz albo podziel dane.";
+    }catch(e){
+      if(e&&e.text){ lastRun.text=e.text; outEl.innerHTML=md(e.text); } else outEl.innerHTML="";
+      $("#status").textContent=ERR[e&&e.code]||"Nie udało się uzyskać odpowiedzi. Skopiuj prompt i wklej go w claude.ai.";
+    }finally{ setBusy(false); }
+  } else if(key){
+    ctl=new AbortController(); setBusy(true);
+    outEl.innerHTML=`<p style="color:var(--muted)">Łączę z API Anthropic…</p>`;
+    try{ await runApi(prompt,key,t=>{ lastRun.text=t; outEl.innerHTML=md(t); }, ctl.signal); }
+    catch(e){ $("#status").textContent= e.name==="AbortError"?"Zatrzymano.":"Błąd API: "+(e.message||"sprawdź klucz i połączenie"); }
+    finally{ setBusy(false); }
+  } else {
+    $("#out").hidden=true;
+    await copy(prompt);
+    window.open("https://claude.ai/new","_blank","noopener");
+    $("#status").textContent="Skopiowano prompt. Wklej go w nowej rozmowie w claude.ai (Ctrl+V).";
+    return;
+  }
+  renderCatalogKeep();
+}
+async function runApi(prompt,key,onText,signal){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal,headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:M.apiModel||"claude-sonnet-5",max_tokens:8000,stream:true,messages:[{role:"user",content:prompt}]})});
+  if(!res.ok){ let m=res.status+""; try{ m=(await res.json()).error.message; }catch{} throw new Error(m); }
+  const rd=res.body.getReader(), dec=new TextDecoder(); let buf="", text="";
+  for(;;){ const {done,value}=await rd.read(); if(done) break; buf+=dec.decode(value,{stream:true});
+    let i; while((i=buf.indexOf("\n"))>=0){ const line=buf.slice(0,i).trim(); buf=buf.slice(i+1);
+      if(!line.startsWith("data:")) continue; try{ const ev=JSON.parse(line.slice(5)); if(ev.type==="content_block_delta"&&ev.delta&&ev.delta.text){ text+=ev.delta.text; onText(text);} }catch{} } }
+  return text;
+}
+async function copy(txt){
+  try{ await navigator.clipboard.writeText(txt); toast("Skopiowano do schowka"); return true; }
+  catch{ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); let ok=false; try{ ok=document.execCommand("copy"); }catch{} ta.remove(); toast(ok?"Skopiowano do schowka":"Zaznacz podgląd promptu i skopiuj ręcznie"); if(!ok){ $("#prevBox").open=true; } return ok; }
+}
+function renderCatalogKeep(){ const y=window.scrollY; renderAreas(); renderCatalog(); window.scrollTo(0,y); }
+
+/* ——— nauka z ocen i poprawek ——— */
+function addLesson(text,scope,source){
+  text=String(text||"").trim().replace(/\s+/g," "); if(!text) return false;
+  if(M.lessons.some(l=>l.text.toLowerCase()===text.toLowerCase()&&l.scope===scope)) return false;
+  M.lessons.push({id:Math.random().toString(36).slice(2,9),text:text.slice(0,300),scope,source,at:Date.now()});
+  M.lessons=M.lessons.slice(-120); persist(); return true;
+}
+async function distill(kind, payload){
+  // Claude zamienia uwagę lub poprawkę w krótkie, ogólne reguły
+  const prompt=`Jesteś systemem uczenia preferencji w narzędziu dla finansistów. Na podstawie ${kind==="edit"?"porównania odpowiedzi AI z wersją poprawioną przez użytkownika":"oceny i komentarza użytkownika"} sformułuj od 1 do 3 krótkich, ogólnych reguł (każda do 25 słów, tryb rozkazujący, po polsku), które poprawią przyszłe odpowiedzi. Oceń, czy reguła dotyczy tylko tego typu zadania („zadanie”), czy wszystkich zadań („globalna”). Nie powtarzaj istniejących reguł.
+
+<zadanie>${cur.t}</zadanie>
+<istniejace_reguly>${M.lessons.filter(l=>!l.off).map(l=>l.text).join(" | ")||"brak"}</istniejace_reguly>
+${payload}
+
+Odpowiedz wyłącznie tablicą JSON, np. [{"regula":"Podawaj kwoty w tys. zł","zakres":"globalna"}].`;
+  const r=await sample.json(prompt,{modelTier:"quick"});
+  return Array.isArray(r)?r.filter(x=>x&&x.regula):[];
+}
+async function learnFrom(kind,payload,fallbackText){
+  let added=0;
+  if(sample){
+    try{ const rules=await distill(kind,payload); rules.forEach(r=>{ if(addLesson(r.regula, r.zakres==="globalna"?"global":cur.id, kind==="edit"?"z Twoich poprawek":"z oceny")) added++; }); }
+    catch{ if(fallbackText && addLesson(fallbackText,cur.id,"z oceny")) added++; }
+  } else if(fallbackText && addLesson(fallbackText,cur.id,"z oceny")) added++;
+  renderLearnbox(); updatePreview(); renderCatalogKeep();
+  toast(added?`Zapamiętano ${added} ${added===1?"regułę":"reguły"}. Następny prompt je uwzględni.`:"Nie znalazłem nowej reguły do zapamiętania.");
+}
+function rate(up){
+  if(!lastRun||!cur) return;
+  const s=M.stats[cur.id] ||= {uses:0,likes:0,dislikes:0};
+  if(lastRun.rated===up) return;
+  if(lastRun.rated===true) s.likes--; if(lastRun.rated===false) s.dislikes--;
+  lastRun.rated=up; if(up) s.likes++; else s.dislikes++;
+  persist();
+  $("#rUp").setAttribute("aria-pressed",up); $("#rDown").setAttribute("aria-pressed",!up);
+  $("#rateNoteWrap").hidden=false;
+  $("#rateNote").placeholder= up ? "Co było szczególnie dobre? np. Świetny komentarz zarządczy, utrzymuj taki układ" : "Co zmienić? np. Zawsze pokazuj kwoty w tys. zł i dodawaj kolumnę z % udziału";
+  $("#rateNote").focus();
+  renderCatalogKeep();
+}
+
+/* ——— minimalny, bezpieczny renderer Markdown ——— */
+function inline(s){
+  return esc(s).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/(^|[^*])\*([^*\s][^*]*)\*/g,"$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function md(src){
+  const lines=String(src).replace(/\r/g,"").split("\n"); let h="", i=0;
+  const isNum=c=>/^[-+]?[\d\s .,]+(%|\s?zł|\s?PLN|\s?EUR|\s?tys\.)?$/.test(c.trim())&&/\d/.test(c);
+  while(i<lines.length){
+    const l=lines[i];
+    if(/^```/.test(l)){ let j=i+1, b=[]; while(j<lines.length&&!/^```/.test(lines[j])) b.push(lines[j++]); h+=`<pre><code>${esc(b.join("\n"))}</code></pre>`; i=j+1; continue; }
+    if(/^\s*\|.*\|\s*$/.test(l) && i+1<lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i+1])){
+      const row=r=>r.trim().replace(/^\||\|$/g,"").split("|").map(c=>c.trim());
+      const head=row(l); let j=i+2, body=[]; while(j<lines.length&&/^\s*\|.*\|\s*$/.test(lines[j])) body.push(row(lines[j++]));
+      h+=`<div class="tbl"><table><thead><tr>${head.map(c=>`<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${body.map(r=>`<tr>${r.map(c=>`<td${isNum(c)?' class="n"':""}>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; i=j; continue;
+    }
+    let m;
+    if((m=l.match(/^(#{1,4})\s+(.*)/))){ const n=Math.min(m[1].length+1,4); h+=`<h${n}>${inline(m[2])}</h${n}>`; i++; continue; }
+    if(/^\s*(---|\*\*\*)\s*$/.test(l)){ h+="<hr>"; i++; continue; }
+    if(/^>\s?/.test(l)){ let b=[]; while(i<lines.length&&/^>\s?/.test(lines[i])) b.push(lines[i++].replace(/^>\s?/,"")); h+=`<blockquote>${inline(b.join(" "))}</blockquote>`; continue; }
+    if(/^\s*([-*•]|\d+[.)])\s+/.test(l)){
+      const ordered=/^\s*\d+[.)]/.test(l); let items=[];
+      while(i<lines.length&&/^\s*([-*•]|\d+[.)])\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*([-*•]|\d+[.)])\s+/,"")); i++; }
+      h+=`<${ordered?"ol":"ul"}>${items.map(x=>`<li>${inline(x).replace(/^\[ \]/,"☐").replace(/^\[x\]/i,"☑")}</li>`).join("")}</${ordered?"ol":"ul"}>`; continue;
+    }
+    if(!l.trim()){ i++; continue; }
+    let p=[l]; i++; while(i<lines.length&&lines[i].trim()&&!/^(#{1,4}\s|```|\s*[-*•]\s|\s*\d+[.)]\s|>|\s*\|)/.test(lines[i])) p.push(lines[i++]);
+    h+=`<p>${p.map(inline).join("<br>")}</p>`;
+  }
+  return h;
+}
+
+/* =========================================================
+   6. ZEGAR, USTAWIENIA, STATYSTYKI
+   ========================================================= */
+function minutesOn(day){ const a=new Date(day); a.setHours(0,0,0,0); const b=a.getTime()+864e5; return M.log.filter(x=>x.t>=a.getTime()&&x.t<b).reduce((s,x)=>s+x.min,0); }
+function renderClock(){
+  const m=minutesOn(new Date()), C=113.1;
+  $("#ring").setAttribute("stroke-dashoffset", (C - C*Math.min(m,60)/60).toFixed(1));
+  $("#savedToday").textContent=`${m} min`;
+  $("#savedSub").textContent= m>=60 ? "dziś, cel osiągnięty" : `dziś, do celu ${60-m} min`;
+}
+function renderProfile(){
+  $("#profileForm").innerHTML=PROFILE_FIELDS.map(f=>{
+    const val=M.profile[f.k]||"", wide=f.l.includes("(wide)"), l=f.l.replace(" (wide)","");
+    const inp= f.type==="select" ? `<select id="p_${f.k}" name="${f.k}">${f.o.map(o=>`<option value="${esc(o)}"${o===val?" selected":""}>${esc(o||"— wybierz —")}</option>`).join("")}</select>`
+      : f.type==="textarea" ? `<textarea id="p_${f.k}" name="${f.k}" placeholder="${esc(f.ph)}">${esc(val)}</textarea>`
+      : `<input id="p_${f.k}" name="${f.k}" value="${esc(val)}" placeholder="${esc(f.ph)}">`;
+    return `<div class="field${wide?" wide":""}"><label for="p_${f.k}">${esc(l)}</label>${inp}</div>`;
+  }).join("");
+}
+function renderLessons(){
+  const el=$("#lessons");
+  if(!M.lessons.length){ el.innerHTML=`<div class="empty">Jeszcze nic. Oceń odpowiedź przyciskiem „Trafiona” lub „Do poprawy” albo popraw ją ręcznie, a zapamiętam wnioski.</div>`; return; }
+  el.innerHTML=[...M.lessons].reverse().map(l=>`<div class="lesson"><p>${esc(l.text)}<small>${l.scope==="global"?"Globalna":"Zadanie: "+esc((byId[l.scope]||{}).t||l.scope)} · ${esc(l.source||"")} · ${new Date(l.at).toLocaleDateString("pl-PL")}</small></p><button class="btn sm" data-toggle="${l.id}" type="button">${l.off?"Włącz":"Wyłącz"}</button><button class="btn sm" data-del="${l.id}" type="button" aria-label="Usuń regułę">Usuń</button></div>`).join("");
+}
+function renderStats(){
+  const total=M.log.reduce((s,x)=>s+x.min,0), runs=Object.values(M.stats).reduce((s,x)=>s+x.uses,0), rules=M.lessons.filter(l=>!l.off).length;
+  const hrs=(total/60).toLocaleString("pl-PL",{maximumFractionDigits:1});
+  $("#statTiles").innerHTML=`<div class="stat"><b class="num">${hrs} h</b><span>zaoszczędzone łącznie</span></div><div class="stat"><b class="num">${runs}</b><span>uruchomionych zadań</span></div><div class="stat"><b class="num">${rules}</b><span>aktywnych reguł</span></div>`;
+  const days=[...Array(7)].map((_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return d; });
+  const vals=days.map(minutesOn), max=Math.max(60,...vals);
+  $("#bars").innerHTML=days.map((d,i)=>`<div style="height:${Math.max(2,vals[i]/max*100)}%;${vals[i]?"":"background:var(--rule)"}" title="${vals[i]} min"><em>${vals[i]||""}</em><span>${d.toLocaleDateString("pl-PL",{weekday:"short"})}</span></div>`).join("");
+  const top=Object.entries(M.stats).sort((a,b)=>b[1].uses-a[1].uses).slice(0,5);
+  $("#topUsed").innerHTML= top.length ? top.map(([id,s])=>`<div class="lesson"><p>${esc((byId[id]||{}).t||id)}<small class="num">użyte ${s.uses}× · trafione ${s.likes||0} · do poprawy ${s.dislikes||0}</small></p></div>`).join("") : `<div class="empty">Brak danych. Uruchom pierwsze zadanie.</div>`;
+}
+function openSettings(tab="profile"){
+  renderProfile(); renderLessons(); renderStats(); renderConn();
+  $("#apiModel").value=M.apiModel||"claude-sonnet-5";
+  $("#apiKey").value=sessionKey;
+  selectTab(tab);
+  const d=$("#settings"); if(typeof d.showModal==="function") d.showModal(); else d.setAttribute("open","");
+}
+function selectTab(tab){ $$(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab)); $$("[data-panel]").forEach(p=>p.hidden=p.dataset.panel!==tab); }
+async function saveFile(name,data,type){
+  try{ const dl=window.claude&&await window.claude.use("downloads"); if(dl){ await dl.save({filename:name,data}); return; } }catch(e){ if(e&&e.code&&e.code!=="unavailable"){ toast("Nie zapisano pliku."); return; } }
+  try{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([data],{type})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500); }
+  catch{ copy(data); }
+}
+
+/* =========================================================
+   7. ZDARZENIA
+   ========================================================= */
+$("#areas").addEventListener("click",e=>{ const b=e.target.closest("button[data-v]"); if(!b) return; view=b.dataset.v; query=""; $("#q").value=""; renderAreas(); renderCatalog(); window.scrollTo({top:0}); });
+$("#catalog").addEventListener("click",e=>{ const c=e.target.closest(".card"); if(c) openTask(c.dataset.id); });
+$("#q").addEventListener("input",e=>{ query=e.target.value; renderCatalog(); });
+$("#q").addEventListener("keydown",e=>{ if(e.key==="Enter"){ const c=$("#catalog .card"); if(c) openTask(c.dataset.id); } });
+document.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); $("#q").focus(); $("#q").select(); }
+  if((e.ctrlKey||e.metaKey)&&e.key==="Enter"&&cur){ e.preventDefault(); run(); }
+  if(e.key==="Escape" && $("#composer").classList.contains("open") && !$("#settings").open) $("#composer").classList.remove("open");
+});
+$("#cpClose").addEventListener("click",()=>$("#composer").classList.remove("open"));
+$("#mode").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; mode=b.dataset.m; $$("#mode button").forEach(x=>x.setAttribute("aria-pressed",x===b)); updatePreview(); });
+$("#cpForm").addEventListener("input",()=>updatePreview());
+$("#cpForm").addEventListener("change",()=>updatePreview());
+$("#cpForm").addEventListener("submit",e=>{ e.preventDefault(); run(); });
+$("#copyBtn").addEventListener("click",async()=>{ await copy(currentPrompt()); markUse(); renderCatalogKeep(); });
+$("#openClaude").addEventListener("click",async e=>{ const p=currentPrompt(); if(p.length>=7000){ await copy(p); toast("Prompt jest długi: skopiowano go, wklej w claude.ai"); } markUse(); });
+$("#stopBtn").addEventListener("click",()=>ctl&&ctl.abort());
+$("#copyOut").addEventListener("click",()=>lastRun&&copy(lastRun.text));
+$("#saveOut").addEventListener("click",()=>{ if(!lastRun) return; saveFile(`${cur.id}-${new Date().toISOString().slice(0,10)}.md`, `# ${cur.t}\n\n${lastRun.text}\n`, "text/markdown"); });
+$("#editBtn").addEventListener("click",()=>{ if(!lastRun) return; $("#editOut").value=lastRun.text; $("#editWrap").hidden=false; $("#editOut").focus(); });
+$("#cancelEdit").addEventListener("click",()=>{ $("#editWrap").hidden=true; });
+$("#learnEdit").addEventListener("click",async()=>{
+  const edited=$("#editOut").value; if(!lastRun||edited.trim()===lastRun.text.trim()){ toast("Nie wprowadzono zmian."); return; }
+  const b=$("#learnEdit"); b.disabled=true; b.textContent="Analizuję poprawki…";
+  await learnFrom("edit",`<oryginal>${lastRun.text.slice(0,12000)}</oryginal>\n<poprawiona>${edited.slice(0,12000)}</poprawiona>`, sample?null:"Stosuj styl i układ z mojej poprawionej wersji: "+edited.slice(0,160));
+  lastRun.text=edited; $("#outMd").innerHTML=md(edited); $("#editWrap").hidden=true; b.disabled=false; b.textContent="Naucz się z moich poprawek";
+});
+$("#rUp").addEventListener("click",()=>rate(true));
+$("#rDown").addEventListener("click",()=>rate(false));
+$("#rateSave").addEventListener("click",async()=>{
+  const note=$("#rateNote").value.trim(); if(!note){ $("#rateNoteWrap").hidden=true; toast("Zapisano ocenę."); return; }
+  const b=$("#rateSave"); b.disabled=true;
+  await learnFrom("rate",`<ocena>${lastRun.rated?"pozytywna":"negatywna"}</ocena>\n<komentarz>${note}</komentarz>\n<fragment_odpowiedzi>${(lastRun.text||"").slice(0,4000)}</fragment_odpowiedzi>`, (lastRun.rated?"Utrzymuj: ":"")+note);
+  b.disabled=false; $("#rateNote").value=""; $("#rateNoteWrap").hidden=true;
+});
+const drop=$("#drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>addFiles(e.dataTransfer.files));
+$("#file").addEventListener("change",e=>{ addFiles(e.target.files); e.target.value=""; });
+$("#files").addEventListener("click",e=>{ const b=e.target.closest("[data-rm]"); if(!b) return; files.splice(+b.dataset.rm,1); renderFiles(); updatePreview(); });
+document.addEventListener("paste",e=>{ if(!cur||e.target.closest("input,textarea")) return; const f=[...(e.clipboardData?.files||[])]; if(f.length){ e.preventDefault(); addFiles(f); } });
+
+$("#openSettings").addEventListener("click",()=>openSettings());
+$("#closeSettings").addEventListener("click",()=>$("#settings").close());
+$("#settings").addEventListener("click",e=>{ if(e.target===$("#settings")) $("#settings").close(); });
+$("#settings").addEventListener("close",()=>{ renderCatalogKeep(); if(cur){ renderLearnbox(); updatePreview(); } });
+$(".tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b){ selectTab(b.dataset.tab); if(b.dataset.tab==="stats") renderStats(); } });
+["input","change"].forEach(ev=>$("#profileForm").addEventListener(ev,e=>{ const el=e.target; if(!el.name) return; M.profile[el.name]=el.value; persist(); if(cur) updatePreview(); }));
+$("#addRule").addEventListener("click",()=>{ if(addLesson($("#newRule").value,"global","dodana ręcznie")){ $("#newRule").value=""; renderLessons(); toast("Dodano regułę"); } });
+$("#newRule").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#addRule").click(); } });
+$("#lessons").addEventListener("click",e=>{
+  const t=e.target.closest("[data-toggle]"), d=e.target.closest("[data-del]");
+  if(t){ const l=M.lessons.find(x=>x.id===t.dataset.toggle); l.off=!l.off; }
+  if(d){ M.lessons=M.lessons.filter(x=>x.id!==d.dataset.del); }
+  if(t||d){ persist(); renderLessons(); }
+});
+$("#apiModel").addEventListener("change",e=>{ M.apiModel=e.target.value; persist(); });
+function storeKey(){ sessionKey=$("#apiKey").value.trim(); try{ sessionStorage.setItem(KEY+".k",sessionKey); if($("#apiKeep").value==="1") localStorage.setItem(KEY+".k",sessionKey); else localStorage.removeItem(KEY+".k"); }catch{} renderConn(); }
+$("#apiKey").addEventListener("change",storeKey); $("#apiKeep").addEventListener("change",storeKey);
+$("#exportBtn").addEventListener("click",()=>saveFile(`godzina-finansisty-pamiec-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(M,null,2), "application/json"));
+$("#importFile").addEventListener("change",async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{ const d=JSON.parse(await f.text()); if(typeof d!=="object"||!d) throw 0;
+    M.profile=Object.assign({},M.profile,d.profile||{});
+    (d.lessons||[]).forEach(l=>{ if(!M.lessons.some(x=>x.text===l.text&&x.scope===l.scope)) M.lessons.push(l); });
+    Object.entries(d.stats||{}).forEach(([k,v])=>{ const s=M.stats[k] ||= {uses:0,likes:0,dislikes:0}; s.uses+=v.uses||0; s.likes+=v.likes||0; s.dislikes+=v.dislikes||0; s.last=Math.max(s.last||0,v.last||0); });
+    M.values=Object.assign({},d.values||{},M.values); M.hist=Object.assign({},d.hist||{},M.hist); M.log=[...M.log,...(d.log||[])].sort((a,b)=>a.t-b.t).slice(-800);
+    persist(); renderProfile(); renderLessons(); renderStats(); renderClock(); toast("Zaimportowano pamięć");
+  }catch{ toast("To nie jest plik eksportu Godziny Finansisty."); }
+  e.target.value="";
+});
+$("#resetBtn").addEventListener("click",()=>{ $("#resetConfirm").hidden=false; });
+$("#resetNo").addEventListener("click",()=>{ $("#resetConfirm").hidden=true; });
+$("#resetYes").addEventListener("click",()=>{ M=blank(); persist(); $("#resetConfirm").hidden=true; renderProfile(); renderLessons(); renderStats(); renderClock(); renderCatalogKeep(); toast("Pamięć wyczyszczona"); });
+
+/* ——— start ——— */
+renderAreas(); renderCatalog(); renderClock();
+const hash=(location.hash||"").slice(1);
+openTask(byId[hash]?hash:recommended()[0].t.id,{silent:!byId[hash]});
+if(!memoryOk) toast("Pamięć przeglądarki jest niedostępna: nauka działa tylko do zamknięcia strony.");
+initSample();
+window.__GF={T,M:()=>M,buildPrompt,md,recommended,calendarHints};
+})();
+</script>
+</body>
+</html>

@@ -11,4 +11,5 @@ mkdir -p dist
   awk 'f{print} /^<header class="top">/{f=1; print}' app/godzina-finansisty.html
   printf '</body>\n</html>\n'
 } > dist/index.html
+cp dist/index.html dist/godzina-finansisty.html
 echo "Zbudowano dist/index.html ($(wc -c < dist/index.html) B)"
