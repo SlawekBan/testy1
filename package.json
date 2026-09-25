@@ -1,0 +1,12 @@
+{
+  "name": "godzina-finansisty",
+  "version": "1.0.0",
+  "description": "Samouczące się narzędzie promptów finansowych dla Claude (PL)",
+  "private": true,
+  "scripts": {
+    "build": "bash scripts/build.sh && node scripts/katalog.cjs",
+    "test": "bash scripts/build.sh && NODE_PATH=$(npm root -g) node tests/e2e.cjs",
+    "katalog": "node scripts/katalog.cjs"
+  },
+  "license": "MIT"
+}
