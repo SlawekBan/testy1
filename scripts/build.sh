@@ -13,3 +13,7 @@ mkdir -p dist
 } > dist/index.html
 cp dist/index.html dist/godzina-finansisty.html
 echo "Zbudowano dist/index.html ($(wc -c < dist/index.html) B)"
+
+# Wersja offline: niezależna od Claude, jeden plik bez zewnętrznych zasobów
+cat offline/01-head.html offline/02-core.js offline/03-kinds.js offline/04-calcs.js offline/05-content.js offline/06-app.js > dist/godzina-finansisty-offline.html
+echo "Zbudowano dist/godzina-finansisty-offline.html ($(wc -c < dist/godzina-finansisty-offline.html) B)"
